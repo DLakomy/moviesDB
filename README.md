@@ -2,7 +2,7 @@
 
 TODO
 - [x] Endpoints
-- [ ] Move model to a dedicated file/package
+- [X] Move model to a dedicated file/package
 - [ ] Service + Repository algebras
 - [ ] Service impl.
 - [ ] Repository impl. (SQLite+Flyway or sth)
