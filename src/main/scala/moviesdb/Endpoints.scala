@@ -18,13 +18,12 @@ import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 // TODO convert to a class receiving service algebra
-// TODO replace int with movie id (opaque type)
 class Endpoints/*(service: MoviesServiceAlgebra)*/:
 
   // example
   val exampleMovies: List[Movie] = List(
-    Standalone(123, "Movie1", ProductionYear(2007)),
-    Series(456, "Series3", List(Episode("EpI", ProductionYear(2008), 1), Episode("EpII", ProductionYear(2005), 2)))
+    Standalone(MovieId(123), "Movie1", ProductionYear(2007)),
+    Series(MovieId(456), "Series3", List(Episode("EpI", ProductionYear(2008), 1), Episode("EpII", ProductionYear(2005), 2)))
   )
   private val exampleMovie: Movie = exampleMovies.head
   private val newExampleMovie: NewMovie = NewStandalone("Movie1", ProductionYear(2007))
