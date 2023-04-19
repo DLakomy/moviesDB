@@ -29,7 +29,6 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
   private val exampleMovie: Movie = exampleMovies.head
   private val newExampleMovie: NewMovie = NewStandalone("Movie1", ProductionYear(2007))
 
-  // TODO it won't work this way, error out is invariant
   private val moviesEndpoint: PartialServerEndpoint[UsernamePassword, User, Unit, ApiError.Unauthorized.type, Unit, Any, F] = endpoint
     .tag("Movie actions")
     .in("movies")
