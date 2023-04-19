@@ -6,7 +6,7 @@ import io.circe.derivation.Configuration as CirceConfiguration
 import io.circe.{Decoder as CDecoder, Encoder as CEncoder}
 import moviesdb.domain.*
 import moviesdb.domain.Movies.*
-import moviesdb.movies.{MoviesServiceAlgebra, UpdateError}
+import moviesdb.movies.MoviesServiceAlgebra
 import sttp.model.StatusCode
 import sttp.model.headers.WWWAuthenticateChallenge
 import sttp.tapir.*
@@ -29,12 +29,13 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
   private val exampleMovie: Movie = exampleMovies.head
   private val newExampleMovie: NewMovie = NewStandalone("Movie1", ProductionYear(2007))
 
-  private val moviesEndpoint: PartialServerEndpoint[UsernamePassword, User, Unit, UpdateError, Unit, Any, F] = endpoint
+  // TODO it won't work this way, error out is invariant
+  private val moviesEndpoint: PartialServerEndpoint[UsernamePassword, User, Unit, ApiError.Unauthorized.type, Unit, Any, F] = endpoint
     .tag("Movie actions")
     .in("movies")
     .securityIn(auth.basic[UsernamePassword]())
-    .errorOut(statusCode(StatusCode.Forbidden).description("Unauthorized").and(stringBody.map(_ => UpdateError.Unauthorized)(_.toString)))
-    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(66), "testUser"), UpdateError.Unauthorized)))
+    .errorOut(statusCode(StatusCode.Forbidden).description("Unauthorized").and(stringBody.map(_ => ApiError.Unauthorized)(_.info)))
+    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(66), "testUser"), ApiError.Unauthorized)))
 
   private val moviesListing = moviesEndpoint
     .get
@@ -45,14 +46,15 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .get
     .in(path[Int].name("id"))
     .out(jsonBody[Movie].example(exampleMovie))
-    .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Movie not found").and(stringBody.map(_ => UpdateError.NotFound)(_.toString))))
-    .serverLogic(user => id => service.getMovie(MovieId(id), user.id).map(_.toRight(UpdateError.NotFound)))
+    .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Movie not found").and(stringBody.map(_ => ApiError.MovieNotFound)(_.info))))
+    .serverLogic(user => id => service.getMovie(MovieId(id), user.id).map(_.toRight(ApiError.MovieNotFound)))
 
   private val createMovie = moviesEndpoint
     .post
     .in("create")
     .in(jsonBody[NewMovie].description("A movie to add").example(newExampleMovie))
     .out(statusCode(StatusCode.Created).description("Successfully created").and(jsonBody[Movie].example(exampleMovie)))
+    .errorOutVariant(oneOfVariant(statusCode(StatusCode.BadRequest).description("Error when creating a movie").and(stringBody.map(ApiError.InvalidData(_))(_.info))))
     .serverLogic(user => newMovie => service.createMovie(newMovie, user.id))
 
   private val deleteMovieById = moviesEndpoint
@@ -62,15 +64,15 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Not found")))
     .serverLogic(user => id => service.deleteMovie(MovieId(id), user.id).map(_.toRight("Not found")))
 
-  private val updateMovieById: Full[UsernamePassword, User, (Int, Movie), UpdateError, Unit, Any, F]= moviesEndpoint
+  private val updateMovieById = moviesEndpoint
     .put
     .in(path[Int].name("id"))
     .in(jsonBody[Movie].example(exampleMovie))
     .out(statusCode(StatusCode.NoContent).description("Successfully updated as instructed (no need to fetch)"))
-    // TODO wrong messages
-    .errorOutVariants(
-      oneOfVariantValueMatcher(StatusCode.NotFound, stringBody.description("Not found").map(_ => UpdateError.IdMismatch)(_ => "Id mismatch TODO")) { case UpdateError.IdMismatch => true },
-      oneOfVariantValueMatcher(StatusCode.BadRequest, stringBody.description("Malformed message or id mismatch").map(_ => UpdateError.NotFound)(_ => "Not found TODO")) { case UpdateError.NotFound => true }
+    .errorOutVariants[ErrorInfo](
+        oneOfVariant(StatusCode.NotFound, stringBody.description("Not found").map(_ => ApiError.MovieNotFound)(_.info)),
+        oneOfVariant(StatusCode.BadRequest, stringBody.description("Id mismatch or other error").map(_ => ApiError.IdMismatch)(_.info)),
+        oneOfDefaultVariant(stringBody.map(ApiError.InvalidData(_))(_.info))
     )
     .serverLogic { user => (id, updatedMovie) =>
       service.updateMovie(MovieId(id), updatedMovie, user.id)
@@ -80,8 +82,9 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     moviesListing,
     getMovieById,
     createMovie,
-    updateMovieById,
-    deleteMovieById)
+//    deleteMovieById,
+    updateMovieById
+  )
 
   val docEndpoints: List[ServerEndpoint[Any, F]] = SwaggerInterpreter()
     .fromServerEndpoints[F](apiEndpoints, "Movies DB", "1.0.0")

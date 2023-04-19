@@ -1,7 +1,7 @@
 val tapirVersion = "1.2.10"
 
 ThisBuild / scalacOptions ++=
-  Seq("-Xmax-inlines", "256", "-Xfatal-warnings")
+  Seq("-Xmax-inlines", "256", "-Xfatal-warnings", "-deprecation")
 
 lazy val rootProject = (project in file(".")).settings(
   Seq(
