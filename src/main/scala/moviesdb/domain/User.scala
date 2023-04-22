@@ -8,4 +8,8 @@ opaque type PasswordHash = String
 object PasswordHash:
   def apply(hash: String): PasswordHash = hash
 
-final case class User(id: UserId, name: String)
+opaque type UserName = String
+object UserName:
+  def apply(userName: String): UserName = userName
+
+final case class User(id: UserId, name: UserName)

@@ -16,7 +16,7 @@ lazy val rootProject = (project in file(".")).settings(
       "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % tapirVersion,
       "ch.qos.logback" % "logback-classic" % "1.4.6",
       "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test,
-      "org.scalatest" %% "scalatest" % "3.2.15" % Test,
+      "org.scalameta" %% "munit" % "1.0.0-M7" % Test,
       "com.softwaremill.sttp.client3" %% "circe" % "3.8.13" % Test,
       "io.circe" %% "circe-core" % "0.14.5"
     )

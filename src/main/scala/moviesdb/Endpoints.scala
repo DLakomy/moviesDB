@@ -34,7 +34,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .in("movies")
     .securityIn(auth.basic[UsernamePassword]())
     .errorOut(statusCode(StatusCode.Forbidden).description("Unauthorized").and(stringBody.map(_ => ApiError.Unauthorized)(_.info)))
-    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(66), "testUser"), ApiError.Unauthorized)))
+    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(66), UserName("testUser")), ApiError.Unauthorized)))
 
   private val moviesListing = moviesEndpoint
     .get
@@ -53,7 +53,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .in("create")
     .in(jsonBody[NewMovie].description("A movie to add").example(newExampleMovie))
     .out(statusCode(StatusCode.Created).description("Successfully created").and(jsonBody[Movie].example(exampleMovie)))
-    .errorOutVariant(oneOfVariant(statusCode(StatusCode.BadRequest).description("Error when creating a movie").and(stringBody.map(ApiError.InvalidData(_))(_.info))))
+    .errorOutVariant(oneOfVariant(statusCode(StatusCode.BadRequest).description("Error when creating a movie").and(stringBody.map(ApiError.InvalidData.apply)(_.info))))
     .serverLogic(user => newMovie => service.createMovie(newMovie, user.id))
 
   private val deleteMovieById = moviesEndpoint
@@ -71,7 +71,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .errorOutVariants[ErrorInfo](
         oneOfVariant(StatusCode.NotFound, stringBody.description("Not found").map(_ => ApiError.MovieNotFound)(_.info)),
         oneOfVariant(StatusCode.BadRequest, stringBody.description("Id mismatch or other error").map(_ => ApiError.IdMismatch)(_.info)),
-        oneOfDefaultVariant(stringBody.map(ApiError.InvalidData(_))(_.info))
+        oneOfDefaultVariant(stringBody.map(ApiError.InvalidData.apply)(_.info))
     )
     .serverLogic { user => (id, updatedMovie) =>
       service.updateMovie(MovieId(id), updatedMovie, user.id)
@@ -81,7 +81,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     moviesListing,
     getMovieById,
     createMovie,
-//    deleteMovieById,
+    deleteMovieById,
     updateMovieById
   )
 

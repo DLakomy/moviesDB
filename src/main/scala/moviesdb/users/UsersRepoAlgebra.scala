@@ -1,6 +1,6 @@
 package moviesdb.users
 
-import moviesdb.domain.{ErrorInfo, PasswordHash, User, UserId}
+import moviesdb.domain.*
 
 trait UsersRepoAlgebra[F[_]]:
-  def getUser(id: UserId, passwordHash: PasswordHash): F[Option[User]]
+  def getUser(userName: UserName, passwordHash: PasswordHash): F[Option[User]]
