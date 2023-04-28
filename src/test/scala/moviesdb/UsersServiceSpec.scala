@@ -2,7 +2,7 @@ package moviesdb
 import cats.Id
 import moviesdb.domain.*
 import moviesdb.core.*
-import moviesdb.users.UsersServiceLive
+import moviesdb.users.UsersService
 import testUtils.*
 
 class UsersServiceSpec extends munit.FunSuite:
@@ -23,7 +23,7 @@ class UsersServiceSpec extends munit.FunSuite:
   private val repo = UsersRepoMockup[Id](whiteList)
 
   // this is what we're testing!
-  private val service: UsersServiceLive[Id] = UsersServiceLive(repo, hashFn)
+  private val service: UsersService[Id] = UsersService(repo, hashFn)
 
   test("Should retrieve users when given correct credentials") {
     val expected: List[Option[User]] = usersList.map { (user, _) => Some(user) }

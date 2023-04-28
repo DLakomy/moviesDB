@@ -3,7 +3,7 @@ import cats.Monad
 import moviesdb.domain.*
 import moviesdb.domain.Movies.*
 
-class MoviesServiceLive[F[_]](using F: Monad[F]) extends MoviesServiceAlgebra[F]:
+class MoviesService[F[_]](using F: Monad[F]) extends MoviesServiceAlgebra[F]:
   def getMoviesForUser(id: UserId): F[List[Movie]] = ???
   def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] = ???
   def createMovie(movie: NewMovie, userId: UserId): F[Either[ErrorInfo, Movie]] = ???
