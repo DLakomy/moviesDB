@@ -3,8 +3,10 @@ import cats.Monad
 import moviesdb.domain.*
 import moviesdb.domain.Movies.*
 
-class MoviesService[F[_]](using F: Monad[F]) extends MoviesServiceAlgebra[F]:
-  def getMoviesForUser(id: UserId): F[List[Movie]] = ???
+class MoviesService[F[_]](moviesRepo: MoviesRepoAlgebra[F])(using F: Monad[F]) extends MoviesServiceAlgebra[F]:
+  def getMoviesForUser(id: UserId): F[List[Movie]] =
+    moviesRepo.getMoviesForUser(id)
+
   def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] = ???
   def createMovie(movie: NewMovie, userId: UserId): F[Either[ApiErrorInfo, Movie]] = ???
   def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] = ???
