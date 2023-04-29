@@ -1,20 +1,32 @@
 package moviesdb.movies
-import cats.Monad
+import cats.Applicative
+import cats.syntax.all.*
 import moviesdb.domain.*
 import moviesdb.domain.Movies.*
 
-class MoviesService[F[_]](moviesRepo: MoviesRepoAlgebra[F])(using F: Monad[F]) extends MoviesServiceAlgebra[F]:
+class MoviesService[F[_]: Applicative](repo: MoviesRepoAlgebra[F]) extends MoviesServiceAlgebra[F]:
   def getMoviesForUser(id: UserId): F[List[Movie]] =
-    moviesRepo.getMoviesForUser(id)
+    repo.getMoviesForUser(id)
 
-  def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] = ???
-  def createMovie(movie: NewMovie, userId: UserId): F[Either[ApiErrorInfo, Movie]] = ???
-  def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] = ???
+  def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] =
+    repo.getMovie(movieId, userId)
+
+  def createMovie(movie: NewMovie, userId: UserId): F[Either[ApiErrorInfo, Movie]] =
+    repo
+      .createMovie(movie, userId)
+      .map(_.left.map(err => ApiError.InvalidData(err.info)))
+
+  def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] =
+    repo.deleteMovie(movieId, userId)
+
   def updateMovie(movieId: MovieId, updatedMovie: Movie, userId: UserId): F[Either[ApiErrorInfo, Unit]] =
-    val id: Int = movieId.id
-    F.pure(
-      if id > 10 then Left(ApiError.MovieNotFound)
-      else if id == 6 then Left(ApiError.InvalidData("The data is invalid"))
-      else if id > 5 then Left(ApiError.IdMismatch)
-      else Right(())
-    )
+    if (movieId != updatedMovie.id) Left(ApiError.IdMismatch).pure[F]
+    else {
+      // TODO it's worth to consider using EitherT
+      repo.updateMovie(updatedMovie, userId).map {
+        _.left.map {
+          case DbError.MovieNotFound     => ApiError.MovieNotFound
+          case DbError.InvalidData(info) => ApiError.InvalidData(info)
+        }
+      }
+    }

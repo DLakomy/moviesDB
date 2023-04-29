@@ -27,10 +27,3 @@ extension (newMovie: NewMovie)
     newMovie match
       case NewStandalone(title, year) => Standalone(id, title, year)
       case NewSeries(title, episodes) => Series(id, title, episodes)
-
-  @targetName("isLike")
-  infix def ~=(movie: Movie): Boolean =
-    (newMovie, movie) match
-      case (NewStandalone(nTitle, nYear), Standalone(_, title, year)) => nTitle == title && nYear == year
-      case (NewSeries(nTitle, nEpisodes), Series(_, title, episodes)) => nTitle == title && nEpisodes == episodes
-      case _ => false
