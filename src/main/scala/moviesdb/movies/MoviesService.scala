@@ -11,7 +11,7 @@ class MoviesService[F[_]: Applicative](repo: MoviesRepoAlgebra[F]) extends Movie
   def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] =
     repo.getMovie(movieId, userId)
 
-  def createMovie(movie: NewMovie, userId: UserId): F[Either[ApiErrorInfo, Movie]] =
+  def createMovie(movie: NewMovie, userId: UserId): F[ApiErrorOr[Movie]] =
     repo
       .createMovie(movie, userId)
       .map(_.left.map(err => ApiError.InvalidData(err.info)))
@@ -19,7 +19,7 @@ class MoviesService[F[_]: Applicative](repo: MoviesRepoAlgebra[F]) extends Movie
   def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] =
     repo.deleteMovie(movieId, userId)
 
-  def updateMovie(movieId: MovieId, updatedMovie: Movie, userId: UserId): F[Either[ApiErrorInfo, Unit]] =
+  def updateMovie(movieId: MovieId, updatedMovie: Movie, userId: UserId): F[ApiErrorOr[Unit]] =
     if (movieId != updatedMovie.id) Left(ApiError.IdMismatch).pure[F]
     else {
       // TODO it's worth to consider using EitherT
