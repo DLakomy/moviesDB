@@ -3,8 +3,8 @@ package moviesdb.testUtils
 import cats.Applicative
 import cats.syntax.all.*
 import jdk.javadoc.internal.doclets.formats.html.markup.HtmlStyle
-import moviesdb.domain.Movies.{Movie, MovieId, NewMovie}
-import moviesdb.domain.{ApiError, UserId}
+import moviesdb.domain.*
+import moviesdb.domain.Movies.*
 import moviesdb.movies.{ErrorOr, MoviesRepoAlgebra}
 
 case class DbRow(userId: UserId, movie: Movie)
@@ -51,7 +51,7 @@ class MoviesRepoMockup[F[_]: Applicative](private var state: Vector[DbRow]) exte
 
   def updateMovie(updatedMovie: Movie, userId: UserId): F[ErrorOr[Unit]] =
     val idx = state.indexWhere(row => row.userId == userId && row.movie.id == updatedMovie.id)
-    if (idx < 0) Left(ApiError.MovieNotFound).pure[F]
+    if (idx < 0) Left(DbError.MovieNotFound).pure[F]
     else {
       state = state.updated(idx, DbRow(userId, updatedMovie))
       Right(()).pure[F]

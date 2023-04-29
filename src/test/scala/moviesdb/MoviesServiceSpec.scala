@@ -1,5 +1,9 @@
 package moviesdb
 
+import cats.Id
+import moviesdb.movies.MoviesRepoAlgebra
+import moviesdb.testUtils.*
+
 /*
 trait MoviesServiceAlgebra[F[_]]:
   def getMoviesForUser(id: UserId): F[List[Movie]]
@@ -10,7 +14,14 @@ trait MoviesServiceAlgebra[F[_]]:
 
 */
 
+// TODO https://scalameta.org/munit/docs/fixtures.html
 class MoviesServiceSpec extends munit.FunSuite:
+
+  var repo: MoviesRepoAlgebra[Id] = null
+
+  override def beforeEach(context: BeforeEach): Unit =
+    repo = MoviesRepoMockup(Vector.empty)
+
   test("Should list only movies owned by this user") {
     ???
   }

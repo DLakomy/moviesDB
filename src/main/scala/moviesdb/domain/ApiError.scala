@@ -1,16 +1,16 @@
 package moviesdb.domain
 
-sealed trait ErrorInfo:
+sealed trait ApiErrorInfo:
   def info: String
 
 object ApiError:
-  case object IdMismatch extends ErrorInfo:
+  case object IdMismatch extends ApiErrorInfo:
     val info = "Id in the path is different than this in the payload"
 
-  case object MovieNotFound extends ErrorInfo:
+  case object MovieNotFound extends ApiErrorInfo:
     val info = "Movie not found"
 
-  case object Unauthorized extends ErrorInfo:
+  case object Unauthorized extends ApiErrorInfo:
     val info = "You are not authorized"
 
-  case class InvalidData(val info: String) extends ErrorInfo
+  case class InvalidData(info: String) extends ApiErrorInfo

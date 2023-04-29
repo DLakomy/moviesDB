@@ -68,7 +68,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .in(path[Int].name("id"))
     .in(jsonBody[Movie].example(exampleMovie))
     .out(statusCode(StatusCode.NoContent).description("Successfully updated as instructed (no need to fetch)"))
-    .errorOutVariants[ErrorInfo](
+    .errorOutVariants[ApiErrorInfo](
         oneOfVariant(StatusCode.NotFound, stringBody.description("Not found").map(_ => ApiError.MovieNotFound)(_.info)),
         oneOfVariant(StatusCode.BadRequest, stringBody.description("Id mismatch or other error").map(_ => ApiError.IdMismatch)(_.info)),
         oneOfDefaultVariant(stringBody.map(ApiError.InvalidData.apply)(_.info))
