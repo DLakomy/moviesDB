@@ -3,7 +3,7 @@ package moviesdb.movies
 import moviesdb.domain.Movies.{Movie, MovieId, NewMovie}
 import moviesdb.domain.{ErrorInfo, UserId}
 
-type ErrorOr[A] = Either[String, A]
+type ErrorOr[A] = Either[ErrorInfo, A]
 
 trait MoviesRepoAlgebra[F[_]]:
   def getMoviesForUser(id: UserId): F[List[Movie]]
