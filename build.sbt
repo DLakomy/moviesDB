@@ -18,7 +18,9 @@ lazy val rootProject = (project in file(".")).settings(
       "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % tapirVersion % Test,
       "org.scalameta" %% "munit" % "1.0.0-M7" % Test,
       "com.softwaremill.sttp.client3" %% "circe" % "3.8.13" % Test,
-      "io.circe" %% "circe-core" % "0.14.5"
+      "io.circe" %% "circe-core" % "0.14.5",
+      "org.flywaydb" % "flyway-core" % "9.17.0",
+      "org.xerial" % "sqlite-jdbc" % "3.41.2.1"
     )
   )
 )
