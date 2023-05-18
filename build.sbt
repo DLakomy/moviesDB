@@ -1,4 +1,5 @@
 val tapirVersion = "1.2.10"
+val doobieVersion = "1.0.0-RC2"
 
 ThisBuild / scalacOptions ++=
   Seq("-Xmax-inlines", "256", "-Xfatal-warnings", "-deprecation")
@@ -19,7 +20,9 @@ lazy val rootProject = (project in file(".")).settings(
       "com.softwaremill.sttp.client3" %% "circe" % "3.8.13" % Test,
       "io.circe" %% "circe-core" % "0.14.5",
       "org.flywaydb" % "flyway-core" % "9.17.0",
-      "org.xerial" % "sqlite-jdbc" % "3.41.2.1"
+      "org.xerial" % "sqlite-jdbc" % "3.41.2.1",
+      "org.tpolecat" %% "doobie-core" % doobieVersion,
+      "org.tpolecat" %% "doobie-munit" % doobieVersion % Test
     )
   )
 )
