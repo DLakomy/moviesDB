@@ -56,4 +56,4 @@ object Movies:
   given Schema[Movie] =
     summon[Derived[Schema[Movie]]]
       .value.modifyUnsafe(discriminatorFieldName)(_.copy(description = Some("discriminator")))
-// tapir stop
+  // tapir stop
