@@ -38,7 +38,7 @@ object Main extends IOApp:
        }
        .as(ExitCode.Success)
 
-    // TODO move to some other file
+    // TODO use Utils
     val initDb = IO{
       val sqliteDb = new SQLiteDataSource()
       // TODO parametrize db location
