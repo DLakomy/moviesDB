@@ -23,9 +23,9 @@ CREATE TABLE episodes (
 );
 
 CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT,
-  password_hash TEXT
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  name TEXT NOT NULL,
+  password_hash TEXT NOT NULL
 );
 
 -- I'll skip the indexes, it's not going to be used anyway
