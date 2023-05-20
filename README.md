@@ -30,10 +30,21 @@ TBD
 - [X] Service + Repository algebras
 - [X] Service impl.
 - [X] Schema (Flyway)
-- [ ] User repo
-- [ ] Movies repo
+- [X] Users repo (SQLite)
+- [ ] Movies repo (SQLite)
+- [ ] Endpoints tests
 - [X] Authentication (at this moment the movies should belong to a user)
 - [ ] parametrisation of db location, host and server
 - [ ] Fatjar
 - [ ] Docker (db on a volume!)
 - [ ] GraalVM
+
+## Worth doing but I don't plan to
+
+- E2E tests
+- better data model (especially Episodes and its lack of id...)
+- some validations
+
+Well, I need to take a break from coding, sometimes :D
+I would pursue these points if it were a proper app (not just an exercise)
+or something I have no idea how to implement.
