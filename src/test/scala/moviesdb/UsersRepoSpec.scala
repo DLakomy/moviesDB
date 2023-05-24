@@ -1,4 +1,4 @@
-package moviesdb
+package moviesdb.users
 
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
