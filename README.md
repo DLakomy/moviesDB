@@ -44,6 +44,9 @@ TBD
 - E2E tests
 - better data model (especially Episodes and its lack of id...)
 - some validations
+- use H2 instead of SQLite (I think it would be more convenient)
+- proper logging
+- separate DTO and domain (not necessary in such a simple app)
 
 Well, I need to take a break from coding, sometimes :D
 I would pursue these points if it were a proper app (not just an exercise)
