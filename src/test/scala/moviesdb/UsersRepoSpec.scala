@@ -3,10 +3,12 @@ package moviesdb.users
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import doobie.implicits.*
-import doobie.{ConnectionIO, DataSourceTransactor, ExecutionContexts, Transactor}
+import doobie.{munit as _, *}
 import moviesdb.domain.*
 import moviesdb.sqliteSupport.Utils.*
 import moviesdb.users.UsersRepo
+
+import java.util.UUID
 
 class UsersRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
@@ -23,15 +25,15 @@ class UsersRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
   test("Should retrieve user by name and password hash") {
 
+    val id = UserId(UUID.fromString("aca992e6-fb27-11ed-be56-0242ac120002"))
     val username = "aqq"
     val pwdHash = "123"
 
-    val insert: ConnectionIO[UserId] = for {
-      _ <- sql"insert into users(name, password_hash) values ($username, $pwdHash)".update.run
-      id <- sql"select id from users where rowid = last_insert_rowid()".query[UserId].unique
-    } yield id
-
-    val id = insert.transact(transactor).unsafeRunSync()
+    // insert example record
+    sql"insert into users(id, name, password_hash) values ($id, $username, $pwdHash)"
+      .update
+      .run
+      .transact(transactor).unsafeRunSync()
 
     val expectedUser: User = User(id, UserName(username))
 

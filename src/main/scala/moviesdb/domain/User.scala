@@ -1,11 +1,15 @@
 package moviesdb.domain
 
-import doobie.{Get, Put}
+import doobie.{Get, Put, Read, Write}
 
-opaque type UserId = Int
+import java.util.UUID
+
+opaque type UserId = UUID
 object UserId:
-  def apply(id: Int): UserId = id
-  given (using g: Get[Int]): Get[UserId] = g
+  def apply(id: UUID): UserId = id
+  given Read[UserId] = Read[String].map(UUID.fromString)
+  given Write[UserId] = Write[String].contramap(_.toString)
+
 
 opaque type PasswordHash = String
 object PasswordHash:

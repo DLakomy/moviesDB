@@ -19,6 +19,8 @@ import sttp.tapir.server.ServerEndpoint.Full
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
+import java.util.UUID
+
 class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
 
   // example
@@ -34,7 +36,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
     .in("movies")
     .securityIn(auth.basic[UsernamePassword]())
     .errorOut(statusCode(StatusCode.Forbidden).description("Unauthorized").and(stringBody.map(_ => ApiError.Unauthorized)(_.info)))
-    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(66), UserName("testUser")), ApiError.Unauthorized)))
+    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(UUID.randomUUID()), UserName("testUser")), ApiError.Unauthorized)))
 
   private val moviesListing = moviesEndpoint
     .get

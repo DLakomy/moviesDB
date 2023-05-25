@@ -10,8 +10,8 @@ class UsersServiceSpec extends munit.FunSuite:
   private type Password = String
 
   private val usersList: List[(User, Password)] = List(
-    (User(UserId(1), UserName("User1")), "$strongPwd"),
-    (User(UserId(2), UserName("User2")), "weakPass")
+    (User(uid1, UserName("User1")), "$strongPwd"),
+    (User(uid2, UserName("User2")), "weakPass")
   )
 
   private val hashFn = HashingAlgs.sha256
