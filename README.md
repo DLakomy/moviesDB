@@ -37,7 +37,6 @@ TBD
 - [ ] parametrisation of db location, host and server
 - [ ] Fatjar
 - [ ] Docker (db on a volume!)
-- [ ] GraalVM
 
 ## Worth doing but I don't plan to
 
