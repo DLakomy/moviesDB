@@ -25,8 +25,13 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
 
   // example
   val exampleMovies: List[Movie] = List(
-    Standalone(MovieId(123), "Movie1", ProductionYear(2007)),
-    Series(MovieId(456), "Series3", List(Episode("EpI", ProductionYear(2008), 1), Episode("EpII", ProductionYear(2005), 2)))
+    Standalone(MovieId(UUID.fromString("7f1411e0-7d13-47e6-b7f8-4a661c56dd5b")), "Movie1", ProductionYear(2007)),
+    Series(MovieId(UUID.fromString("6b907b32-2e08-4f28-b904-4a580da5b632")),
+      "Series3",
+      List(
+        Episode("EpI", ProductionYear(2008), 1),
+        Episode("EpII", ProductionYear(2005), 2))
+    )
   )
   private val exampleMovie: Movie = exampleMovies.head
   private val newExampleMovie: NewMovie = NewStandalone("Movie1", ProductionYear(2007))
@@ -45,7 +50,7 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
 
   private val getMovieById = moviesEndpoint
     .get
-    .in(path[Int].name("id"))
+    .in(path[UUID].name("id"))
     .out(jsonBody[Movie].example(exampleMovie))
     .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Movie not found").and(stringBody.map(_ => ApiError.MovieNotFound)(_.info))))
     .serverLogic(user => id => service.getMovie(MovieId(id), user.id).map(_.toRight(ApiError.MovieNotFound)))
@@ -60,14 +65,14 @@ class Endpoints[F[_]](service: MoviesServiceAlgebra[F])(using F: Monad[F]):
 
   private val deleteMovieById = moviesEndpoint
     .delete
-    .in(path[Int].name("id"))
+    .in(path[UUID].name("id"))
     .out(statusCode(StatusCode.NoContent).description("Successfully deleted"))
     .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Not found")))
     .serverLogic(user => id => service.deleteMovie(MovieId(id), user.id).map(_.toRight("Not found")))
 
   private val updateMovieById = moviesEndpoint
     .put
-    .in(path[Int].name("id"))
+    .in(path[UUID].name("id"))
     .in(jsonBody[Movie].example(exampleMovie))
     .out(statusCode(StatusCode.NoContent).description("Successfully updated as instructed (no need to fetch)"))
     .errorOutVariants[ApiErrorInfo](

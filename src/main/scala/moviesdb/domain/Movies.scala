@@ -8,12 +8,15 @@ import sttp.tapir.generic.auto.*
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe.*
 
+import java.util.UUID
+
 object Movies:
   trait Identifiable:
     def id: MovieId
 
   case class ProductionYear(year: Int) extends AnyVal
-  case class MovieId(id: Int) extends AnyVal
+  // TBH no idea why not an opaque type; I guess some derivation issues
+  case class MovieId(value: UUID) extends AnyVal
 
   // of course it should have a variant with ID, but I want to simplify the exercise
   case class Episode(title: String, year: ProductionYear, number: Int)
@@ -31,8 +34,8 @@ object Movies:
   given CirceConfiguration = CirceConfiguration.default.withDiscriminator(discriminatorFieldName)
   given CEncoder[ProductionYear] = CEncoder.encodeInt.contramap(_.year)
   given CDecoder[ProductionYear] = CDecoder.decodeInt.map(ProductionYear.apply)
-  given CEncoder[MovieId] = CEncoder.encodeInt.contramap(_.id)
-  given CDecoder[MovieId] = CDecoder.decodeInt.map(MovieId.apply)
+  given CEncoder[MovieId] = CEncoder.encodeString.contramap(_.value.toString)
+  given CDecoder[MovieId] = CDecoder.decodeString.map(s => MovieId(UUID.fromString(s)))
   given CDecoder[Episode] = CDecoder.derivedConfigured
   given CEncoder[Episode] = CEncoder.AsObject.derivedConfigured
   given CEncoder[NewMovie] = CEncoder.AsObject.derivedConfigured
@@ -46,8 +49,7 @@ object Movies:
     Configuration.default.withDiscriminator(discriminatorFieldName)
   given Schema[ProductionYear] =
     Schema(SchemaType.SInteger()).validate(Validator.min(1800).contramap(_.year))
-  given Schema[MovieId] =
-    Schema(SchemaType.SInteger())
+  given Schema[MovieId] = Schema(SchemaType.SString()).format("UUID")
   given Schema[Episode] =
     summon[Derived[Schema[Episode]]].value.modify(_.number)(_.validate(Validator.min(1)))
   given Schema[NewMovie] =

@@ -7,6 +7,8 @@ import moviesdb.domain.*
 import moviesdb.domain.Movies.*
 import moviesdb.movies.{DbErrorOr, MoviesRepoAlgebra}
 
+import java.util.UUID
+
 case class DbRow(userId: UserId, movie: Movie)
 
 type DbState = Vector[DbRow]
@@ -24,15 +26,6 @@ class MoviesRepoMockup[F[_]: Applicative](private var _state: DbState) extends M
     "Ids in the state must be unique"
   )
 
-  // again no Ref, same reasoning
-  object idSeq:
-    private var currVal: Int =
-      _state.map{ case DbRow(_, mov) => mov.id.id }.maxOption.getOrElse(0)
-
-    def nextVal(): MovieId =
-      currVal += 1
-      MovieId(currVal)
-
   def getMoviesForUser(id: UserId): F[List[Movie]] =
     _state.view.filter(_.userId == id).map(_.movie).toList.pure[F]
 
@@ -40,7 +33,7 @@ class MoviesRepoMockup[F[_]: Applicative](private var _state: DbState) extends M
     _state.find(row => row.movie.id == movieId && row.userId == userId).map(_.movie).pure[F]
 
   def createMovie(movie: NewMovie, userId: UserId): F[DbErrorOr[Movie]] =
-    val movieWithId = movie.withId(idSeq.nextVal())
+    val movieWithId = movie.withId(MovieId(UUID.randomUUID())) // TODO it's totally sideffectful :/
     _state = DbRow(userId, movieWithId) +: _state
     (Right(movieWithId): DbErrorOr[Movie]).pure[F]
 

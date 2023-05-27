@@ -28,25 +28,27 @@ class MoviesServiceSpec extends munit.FunSuite:
   }
 
   test("Should return a movie by id only if the user owns it") {
-    val nonExistent = service.getMovie(MovieId(66), uid1)
+    val nonExistent = service.getMovie(mid66_nonexistent, uid1)
     assertEquals(nonExistent, None)
 
     // existent + wrong user
-    val existentWrongUser = service.getMovie(MovieId(1), uid2)
+    val existentWrongUser = service.getMovie(mid1, uid2)
     assertEquals(existentWrongUser, None)
 
     // existent
-    val existent = service.getMovie(MovieId(1), uid1)
+    val existent = service.getMovie(mid1, uid1)
     assertEquals(existent, Some(user1movies(0)))
   }
 
   test("Should correctly create a movie") {
-    val userId = UserId(UUID.fromString("123e4567-e89b-42d3-a456-556642440003"))
+    // some new user id, not used in fixtures
+    val userId = UserId(UUID.fromString("321e4567-e89b-42d3-a456-556642440003"))
 
     val result = service.createMovie(standaloneTemplate, userId)
     assert(result.isRight) // only happy path atm
+    if (result.isLeft) fail("Got Left (Right expected)")
 
-    val newId = result.map(_.id).getOrElse(MovieId(-1))
+    val newId = result.map(_.id).toOption.get
 
     // check if repo contains it
     val inRepo = repo.getMovie(newId, userId)
@@ -57,16 +59,16 @@ class MoviesServiceSpec extends munit.FunSuite:
   test("Should delete a movie and indicate if it existed before the deletion") {
 
     assertEquals(
-      service.deleteMovie(MovieId(42), uid1),
+      service.deleteMovie(mid66_nonexistent, uid1),
       None // no such movie for this user
     )
 
     assertEquals(
-      service.deleteMovie(MovieId(3), UserId(UUID.fromString("123e4567-e89b-42d3-a456-556642440066"))),
+      service.deleteMovie(mid3, uid66_nonexistent),
       None // no such user
     )
 
-    val delMovId = MovieId(1)
+    val delMovId = mid1
     val delUsrId = uid1
 
     assertEquals(
@@ -83,7 +85,7 @@ class MoviesServiceSpec extends munit.FunSuite:
 
   test("Should update a movie if it exists and the user owns it, NotFound otherwise") {
 
-    val movId = MovieId(1)
+    val movId = mid1
     val modified = standaloneTemplate.copy(title="changed").withId(movId)
 
     val failedRes = service.updateMovie(movId, modified, uid2)
@@ -99,8 +101,8 @@ class MoviesServiceSpec extends munit.FunSuite:
 
   test("Should reject update on id mismatch") {
 
-    val modified = standaloneTemplate.copy(title="changed").withId(MovieId(1))
-    val failedRes = service.updateMovie(MovieId(66), modified, uid2)
+    val modified = standaloneTemplate.copy(title="changed").withId(mid1)
+    val failedRes = service.updateMovie(mid66_nonexistent, modified, uid2)
 
     assertEquals(failedRes, Left(ApiError.IdMismatch))
   }

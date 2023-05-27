@@ -1,20 +1,20 @@
 CREATE TABLE standalones (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id TEXT PRIMARY KEY,
   title TEXT,
   year INTEGER,
-  owner_id INTEGER,
+  owner_id TEXT,
   FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
 CREATE TABLE series (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id TEXT PRIMARY KEY,
   title TEXT,
-  owner_id INTEGER,
+  owner_id TEXT,
   FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
 CREATE TABLE episodes (
-  series_id INTEGER,
+  series_id TEXT,
   number INTEGER,
   title TEXT,
   year INTEGER,
