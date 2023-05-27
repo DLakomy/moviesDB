@@ -17,7 +17,7 @@ object Main extends IOApp:
   override def run(args: List[String]): IO[ExitCode] =
 
     // TODO placeholder, so it compiles (it's not meant to work yet)
-    val ds = dataSourceFromConnString(inMemoryConnString)
+    val ds = dataSourceFromConnString(inMemoryConnString("main"))
     val transactor: Transactor[IO] = Transactor.fromConnection(ds.getConnection)
     val repo = MoviesRepo[IO](transactor)
 

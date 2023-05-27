@@ -11,7 +11,7 @@ import java.util.UUID
 
 class UsersRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
-  val ds = dataSourceFromConnString(inMemoryConnString)
+  val ds = dataSourceFromConnString(inMemoryConnString("usersRepo"))
   val transactor: Transactor[IO] = Transactor.fromConnection(ds.getConnection)
 
   override def beforeAll(): Unit = initDb[IO](ds).unsafeRunSync()

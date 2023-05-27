@@ -14,7 +14,7 @@ import java.util.UUID
 
 class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
-  val ds = dataSourceFromConnString(inMemoryConnString)
+  val ds = dataSourceFromConnString(inMemoryConnString("moviesRepo"))
   val transactor: Transactor[IO] = Transactor.fromConnection(ds.getConnection)
 
   override def beforeAll(): Unit = initDb[IO](ds).unsafeRunSync()

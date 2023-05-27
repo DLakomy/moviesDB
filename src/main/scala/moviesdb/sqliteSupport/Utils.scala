@@ -7,7 +7,7 @@ import org.sqlite.SQLiteDataSource
 object Utils:
   def connStringForPath(path: String): String = s"jdbc:sqlite:$path?foreign_keys=on;"
 
-  val inMemoryConnString: String = "jdbc:sqlite:file:memdb1?mode=memory&cache=shared"
+  def inMemoryConnString(dbName: String): String = s"jdbc:sqlite:file:$dbName?mode=memory&cache=shared"
 
   def dataSourceFromConnString(connString: String): SQLiteDataSource =
     val sqliteDb = new SQLiteDataSource()
