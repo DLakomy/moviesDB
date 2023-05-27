@@ -1,4 +1,4 @@
-package moviesdb.users
+package moviesdb.users.sqlite
 
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
@@ -6,7 +6,6 @@ import doobie.implicits.*
 import doobie.{munit as _, *}
 import moviesdb.domain.*
 import moviesdb.sqliteSupport.Utils.*
-import moviesdb.users.UsersRepo
 
 import java.util.UUID
 

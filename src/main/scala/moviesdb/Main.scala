@@ -2,7 +2,10 @@ package moviesdb
 
 import cats.effect.{ExitCode, IO, IOApp}
 import com.comcast.ip4s.{Host, Port, port}
-import moviesdb.movies.{MoviesRepo, MoviesRepoAlgebra, MoviesService}
+import doobie.util.transactor.Transactor
+import moviesdb.movies.sqlite.MoviesRepo
+import moviesdb.movies.{MoviesRepoAlgebra, MoviesService}
+import moviesdb.sqliteSupport.Utils.{dataSourceFromConnString, inMemoryConnString}
 import org.flywaydb.core.Flyway
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
@@ -14,7 +17,9 @@ object Main extends IOApp:
   override def run(args: List[String]): IO[ExitCode] =
 
     // TODO placeholder, so it compiles (it's not meant to work yet)
-    val repo = MoviesRepo[IO]
+    val ds = dataSourceFromConnString(inMemoryConnString)
+    val transactor: Transactor[IO] = Transactor.fromConnection(ds.getConnection)
+    val repo = MoviesRepo[IO](transactor)
 
     val routes = Http4sServerInterpreter[IO]().toRoutes(Endpoints(MoviesService[IO](repo)).all)
 
