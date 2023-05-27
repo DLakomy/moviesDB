@@ -1,8 +1,8 @@
 CREATE TABLE standalones (
-  id TEXT PRIMARY KEY,
-  title TEXT,
-  year INTEGER,
-  owner_id TEXT,
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  owner_id TEXT NOT NULL,
   FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 

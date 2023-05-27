@@ -1,5 +1,6 @@
 package moviesdb.domain
 
+import doobie.{Read, Write}
 import io.circe.derivation.Configuration as CirceConfiguration
 import io.circe.{Decoder as CDecoder, Encoder as CEncoder}
 import sttp.tapir.*
@@ -28,6 +29,13 @@ object Movies:
   sealed trait Movie extends Identifiable
   case class Standalone(id: MovieId, title: String, year: ProductionYear) extends Movie
   case class Series(id: MovieId, title: String, episodes: List[Episode]) extends Movie
+
+  // doobie start
+  given Read[ProductionYear] = Read[Int].map(ProductionYear.apply)
+  given Write[ProductionYear] = Write[Int].contramap(_.year)
+  given Read[MovieId] = Read[String].map(s => MovieId(UUID.fromString(s)))
+  given Write[MovieId] = Write[String].contramap(_.value.toString)
+  // doobie stop
 
   private val discriminatorFieldName = "objectType"
   // circe start
