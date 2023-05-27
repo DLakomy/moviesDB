@@ -33,7 +33,10 @@ class MoviesRepoMockup[F[_]: Applicative](private var _state: DbState) extends M
     _state.find(row => row.movie.id == movieId && row.userId == userId).map(_.movie).pure[F]
 
   def createMovie(movie: NewMovie, userId: UserId): F[DbErrorOr[Movie]] =
-    val movieWithId = movie.withId(MovieId(UUID.randomUUID())) // TODO it's totally sideffectful :/
+    // it's totally sideffectful (randomUUID thing); I should use UUIDGen + refactor the state to Ref
+    // (to ref, cuz there will no longer be a guarantee that only one thread uses it)
+    // next time I'll do better, I've made too many assumptions
+    val movieWithId = movie.withId(MovieId(UUID.randomUUID()))
     _state = DbRow(userId, movieWithId) +: _state
     (Right(movieWithId): DbErrorOr[Movie]).pure[F]
 
