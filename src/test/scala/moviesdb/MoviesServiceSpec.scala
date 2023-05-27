@@ -1,6 +1,7 @@
 package moviesdb
 
 import cats.Id
+import moviesdb.core.syntax.MoviesSyntax.*
 import moviesdb.domain.Movies.MovieId
 import moviesdb.domain.{ApiError, UserId}
 import moviesdb.movies.{MoviesRepoAlgebra, MoviesService, MoviesServiceAlgebra}

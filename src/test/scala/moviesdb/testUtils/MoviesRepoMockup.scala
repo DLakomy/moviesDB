@@ -2,7 +2,7 @@ package moviesdb.testUtils
 
 import cats.Applicative
 import cats.syntax.all.*
-import jdk.javadoc.internal.doclets.formats.html.markup.HtmlStyle
+import moviesdb.core.syntax.MoviesSyntax.*
 import moviesdb.domain.*
 import moviesdb.domain.Movies.*
 import moviesdb.movies.{DbErrorOr, MoviesRepoAlgebra}

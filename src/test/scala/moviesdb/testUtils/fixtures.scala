@@ -1,5 +1,6 @@
 package moviesdb.testUtils
 
+import moviesdb.core.syntax.MoviesSyntax.*
 import moviesdb.domain.*
 import moviesdb.domain.Movies.*
 
