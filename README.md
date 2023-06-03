@@ -40,7 +40,8 @@ TBD
 
 ## Worth doing but I don't plan to
 
-- E2E tests
+- E2E tests (and maybe test service layer and repos together,
+they are mean't to be used together anyway; it would be less code to maintain)
 - better data model (especially Episodes and its lack of id...)
 - some validations
 - use H2 instead of SQLite (I think it would be more convenient)
