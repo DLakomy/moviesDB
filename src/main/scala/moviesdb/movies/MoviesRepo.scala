@@ -46,7 +46,11 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
   def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] =
     deleteStandaloneQry(movieId, userId).run.transact(xa).map(n => Option.when(n>0)(()))
 
-  def updateMovie(updatedMovie: Movie, userId: UserId): F[DbErrorOr[Unit]] = ???
+  def updateMovie(updatedMovie: Movie, userId: UserId): F[DbErrorOr[Unit]] = updatedMovie match
+    case updatedStandalone: Standalone =>
+      updateStandaloneQry(updatedStandalone, userId).run.transact(xa)
+        .map(n => Either.cond(n>0, (), DbError.MovieNotFound))
+    case _ => ???
 
 private[this] object MoviesQueries:
   def getStandalonesForUserQry(userId: UserId): Query0[Standalone] =
@@ -71,3 +75,11 @@ private[this] object MoviesQueries:
     sql"""
          DELETE FROM standalones WHERE id = $movieId AND owner_id = $userId
        """.update
+
+def updateStandaloneQry(updatedMovie: Standalone, userId: UserId): Update0 =
+  sql"""
+       UPDATE standalones
+          SET title = ${updatedMovie.title}
+            , year = ${updatedMovie.year}
+        WHERE id = ${updatedMovie.id} AND owner_id = $userId
+     """.update

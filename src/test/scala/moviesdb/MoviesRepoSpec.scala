@@ -47,7 +47,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     // check(insertMovie(standaloneTemplate.withId(mid1), uid1))
   }
 
-  test("The DMLs should typecheck after Dobbie issue is fixed".ignore) {
+  test("The DMLs should typecheck after Doobie issue #1782 is fixed".ignore) {
     import MoviesQueries.*
 
     // fails, I suspect https://github.com/tpolecat/doobie/issues/1782
