@@ -39,11 +39,13 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
       for
         newId <- UUIDGen.randomUUID.map(MovieId.apply)
         newStandalone = movie.withId(newId)
-        _ <- insertStandalone(newStandalone, userId).run.transact(xa)
+        _ <- insertStandaloneQry(newStandalone, userId).run.transact(xa)
       yield Right(newStandalone) // no expected errors
     case _ => ???
 
-  def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] = ???
+  def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] =
+    deleteStandaloneQry(movieId, userId).run.transact(xa).map(n => Option.when(n>0)(()))
+
   def updateMovie(updatedMovie: Movie, userId: UserId): F[DbErrorOr[Unit]] = ???
 
 private[this] object MoviesQueries:
@@ -52,15 +54,20 @@ private[this] object MoviesQueries:
       .query[Standalone]
 
   def getStandaloneForUserQry(movieId: MovieId, userId: UserId): Query0[Standalone] =
-    sql"SELECT id, title, year FROM standalones WHERE owner_id = $userId and id = $movieId"
+    sql"SELECT id, title, year FROM standalones WHERE owner_id = $userId AND id = $movieId"
       .query[Standalone]
 
   def getAllSeriesForUserQry(userId: UserId): Query0[Series] = ???
 
   def getSeriesForUserQry(movieId: MovieId, userId: UserId): Query0[Series] = ???
 
-  def insertStandalone(movie: Standalone, userId: UserId): Update0 =
+  def insertStandaloneQry(movie: Standalone, userId: UserId): Update0 =
     sql"""
       INSERT INTO standalones (id, title, year, owner_id)
       VALUES (${movie.id}, ${movie.title}, ${movie.year}, $userId)
     """.update
+
+  def deleteStandaloneQry(movieId: MovieId, userId: UserId): Update0 =
+    sql"""
+         DELETE FROM standalones WHERE id = $movieId AND owner_id = $userId
+       """.update
