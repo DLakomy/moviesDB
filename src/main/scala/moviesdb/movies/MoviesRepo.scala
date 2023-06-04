@@ -38,9 +38,9 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
     case movie: NewStandalone =>
       for
         newId <- UUIDGen.randomUUID.map(MovieId.apply)
-        _ <- insertStandalone(movie.withId(newId), userId).run.transact(xa)
-        newMovie <- getMovie(newId, userId)
-      yield newMovie.toRight(DbError.MovieNotFound) // imprecise, but let it be
+        newStandalone = movie.withId(newId)
+        _ <- insertStandalone(newStandalone, userId).run.transact(xa)
+      yield Right(newStandalone) // no expected errors
     case _ => ???
 
   def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] = ???
