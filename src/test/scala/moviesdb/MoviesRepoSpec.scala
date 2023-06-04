@@ -71,10 +71,11 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
       id = movieFromCreate.id
       movieFromGet <- moviesRepo.getMovie(id, uid)
       otherUserMovie <- moviesRepo.getMovie(id, otherUid)
-    yield (movieFromGet, otherUserMovie, movieFromCreate)
+    yield (id, movieFromGet, otherUserMovie, movieFromCreate)
 
-    val  (movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
+    val (id, movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
 
+    assertEquals(movieFromCreate, standaloneTemplate.withId(id), "The movie is not identical to what was provided")
     assertEquals(Some(movieFromCreate), movieFromGet, "Movie not found")
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }
