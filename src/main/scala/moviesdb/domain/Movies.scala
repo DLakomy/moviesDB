@@ -20,6 +20,7 @@ object Movies:
   case class MovieId(value: UUID) extends AnyVal
 
   // of course it should have a variant with ID, but I want to simplify the exercise
+  // the number should be > 0; I guess it would be worth to use a smart constructor
   case class Episode(title: String, year: ProductionYear, number: Int)
 
   sealed trait NewMovie

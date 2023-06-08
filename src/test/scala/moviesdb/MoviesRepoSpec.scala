@@ -80,7 +80,6 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }
 
-
   test("Should update a standalone movie") {
 
     val newMovie = standaloneTemplate
@@ -120,4 +119,22 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(deleteCorrectResult, Some(()))
     assertEquals(deleteAgainResult, None, "The movie shouldn't exist at this point")
     assertEquals(movieFromRepo, None, "Movie shouldn't be found after deletion")
+  }
+
+  // I test create a bit more extensively here
+  // (no separate test, its hard to test it without getMovie; I don't want to duplicate getMovie logic)
+  test("Should create and retrieve a series") {
+
+    val program = for
+      movieFromCreate <- addTestMovie(standaloneTemplate, uid)
+      id = movieFromCreate.id
+      movieFromGet <- moviesRepo.getMovie(id, uid)
+      otherUserMovie <- moviesRepo.getMovie(id, otherUid)
+    yield (id, movieFromGet, otherUserMovie, movieFromCreate)
+
+    val (id, movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
+
+    assertEquals(movieFromCreate, standaloneTemplate.withId(id), "The movie is not identical to what was provided")
+    assertEquals(Some(movieFromCreate), movieFromGet, "Movie not found")
+    assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }
