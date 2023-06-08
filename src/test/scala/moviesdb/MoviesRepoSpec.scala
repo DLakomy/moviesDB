@@ -7,7 +7,7 @@ import doobie.implicits.*
 import doobie.{munit as _, *}
 import moviesdb.core.syntax.MoviesSyntax.*
 import moviesdb.domain.*
-import moviesdb.domain.Movies.{Movie, NewMovie, NewStandalone, ProductionYear}
+import moviesdb.domain.Movies.{Movie, MovieId, NewMovie, NewStandalone, ProductionYear}
 import moviesdb.movies.sqlite.MoviesRepo
 import moviesdb.sqliteSupport.Utils.*
 import moviesdb.testUtils.*
@@ -37,21 +37,29 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
   test("The DMLs should typecheck") {
     import MoviesQueries.*
 
-    val randomUUID = UUID.randomUUID()
+    val randomId = MovieId(UUID.randomUUID())
+    val standalone = standaloneTemplate.withId(randomId)
+    val series = newSeries1.withId(randomId)
 
     check(getStandalonesForUserQry(uid))
     check(getStandaloneForUserQry(mid1, uid))
     check(deleteStandaloneQry(mid1, uid))
 
-    // fails, I suspect https://github.com/tpolecat/doobie/issues/1782
-    // check(insertMovie(standaloneTemplate.withId(mid1), uid1))
+    check(insertSeriesQry(series, uid))
+    check(getEpisodesForSeriesQry(mid1))
   }
 
   test("Some failing DMLs should typecheck after Doobie issue #1782 is fixed".ignore) {
     import MoviesQueries.*
 
+    val randomId = MovieId(UUID.randomUUID())
+    val standalone = standaloneTemplate.withId(randomId)
+    val series = newSeries1.withId(randomId)
+
     // fails, I suspect https://github.com/tpolecat/doobie/issues/1782
     check(insertStandaloneQry(standaloneTemplate.withId(mid1), uid1))
+    check(updateStandaloneQry(standalone, uid))
+    check(insertEpisodeQry(mid1, newSeries1.episodes.head))
   }
 
   // fails in case of creation error
@@ -76,7 +84,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     val (id, movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
 
     assertEquals(movieFromCreate, standaloneTemplate.withId(id), "The movie is not identical to what was provided")
-    assertEquals(Some(movieFromCreate), movieFromGet, "Movie not found")
+    assertEquals(Some(movieFromCreate), movieFromGet, "Movie from create doesn't match the one fetched")
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }
 
@@ -123,10 +131,12 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
   // I test create a bit more extensively here
   // (no separate test, its hard to test it without getMovie; I don't want to duplicate getMovie logic)
+  // quite similar to testing a standalone, but I don't want to be hasty with refactoring it to one function
+  // it can possibly diverge in the hypothetical future
   test("Should create and retrieve a series") {
 
     val program = for
-      movieFromCreate <- addTestMovie(standaloneTemplate, uid)
+      movieFromCreate <- addTestMovie(newSeries1, uid)
       id = movieFromCreate.id
       movieFromGet <- moviesRepo.getMovie(id, uid)
       otherUserMovie <- moviesRepo.getMovie(id, otherUid)
@@ -134,7 +144,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
     val (id, movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
 
-    assertEquals(movieFromCreate, standaloneTemplate.withId(id), "The movie is not identical to what was provided")
-    assertEquals(Some(movieFromCreate), movieFromGet, "Movie not found")
+    assertEquals(movieFromCreate, newSeries1.withId(id), "The movie is not identical to what was provided")
+    assertEquals(Some(movieFromCreate), movieFromGet, "Movie from create doesn't match the one fetched")
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }

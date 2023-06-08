@@ -30,18 +30,35 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
 
   def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] =
     getStandaloneForUserQry(movieId, userId).option.transact(xa).flatMap {
-      case None => None.pure // later: getSeriesForUserQry(movieId, userId).option.transact(xa).widen
-      case a@Some(std) => a.pure
+      case None =>
+        val query = for
+          maybeHeader <- getSeriesHeaderForUserQry(movieId, userId).option
+          fetchedEps <-
+            if (maybeHeader.isEmpty) List.empty[Episode].pure[ConnectionIO]
+            else getEpisodesForSeriesQry(movieId).to[List]
+        yield maybeHeader.map(_.copy(episodes = fetchedEps))
+
+        query.transact(xa).widen
+
+      case a@Some(_) => a.pure
     }
 
   def createMovie(movie: NewMovie, userId: UserId): F[DbErrorOr[Movie]] = movie match
-    case movie: NewStandalone =>
+    case standalone: NewStandalone =>
       for
         newId <- UUIDGen.randomUUID.map(MovieId.apply)
-        newStandalone = movie.withId(newId)
+        newStandalone = standalone.withId(newId)
         _ <- insertStandaloneQry(newStandalone, userId).run.transact(xa)
       yield Right(newStandalone) // no expected errors
-    case _ => ???
+    case series: NewSeries =>
+      for
+        newId <- UUIDGen.randomUUID.map(MovieId.apply)
+        newSeries = series.withId(newId)
+        _ <- (
+          insertSeriesQry(newSeries, userId).run >>
+          newSeries.episodes.traverse(ep => insertEpisodeQry(newId, ep).run)
+        ).transact(xa)
+      yield Right(newSeries)
 
   def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] =
     deleteStandaloneQry(movieId, userId).run.transact(xa).map(n => Option.when(n>0)(()))
@@ -51,6 +68,7 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
       updateStandaloneQry(updatedStandalone, userId).run.transact(xa)
         .map(n => Either.cond(n>0, (), DbError.MovieNotFound))
     case _ => ???
+
 
 private[this] object MoviesQueries:
   def getStandalonesForUserQry(userId: UserId): Query0[Standalone] =
@@ -63,7 +81,10 @@ private[this] object MoviesQueries:
 
   def getAllSeriesForUserQry(userId: UserId): Query0[Series] = ???
 
-  def getSeriesForUserQry(movieId: MovieId, userId: UserId): Query0[Series] = ???
+  // the episodes should be fetched separately (it is a separate query, so I can check it in UT)
+  def getSeriesHeaderForUserQry(movieId: MovieId, userId: UserId): Query0[Series] =
+    sql"SELECT id, title FROM series WHERE owner_id = $userId AND id = $movieId"
+      .query[(MovieId, String)].map((id, title) => Series(id, title, List.empty))
 
   def insertStandaloneQry(movie: Standalone, userId: UserId): Update0 =
     sql"""
@@ -71,15 +92,34 @@ private[this] object MoviesQueries:
       VALUES (${movie.id}, ${movie.title}, ${movie.year}, $userId)
     """.update
 
+  def insertSeriesQry(movie: Series, userId: UserId): Update0 =
+    sql"""
+      INSERT INTO series (id, title, owner_id)
+      VALUES (${movie.id}, ${movie.title}, $userId)
+    """.update
+
+  // BTW it would be possible to use Update[...](sql).updateMany(ps) after some refactoring
+  // can be risky tho: https://github.com/tpolecat/doobie/issues/706
+  def insertEpisodeQry(seriesId: MovieId, episode: Episode): Update0 =
+    sql"""
+      INSERT INTO episodes (series_id, title, year, number)
+      VALUES ($seriesId, ${episode.title}, ${episode.year}, ${episode.number})
+    """.update
+
+  def getEpisodesForSeriesQry(seriesId: MovieId): Query0[Episode] =
+    sql"""
+      SELECT title, year, number FROM episodes WHERE series_id = $seriesId
+       """.query
+
   def deleteStandaloneQry(movieId: MovieId, userId: UserId): Update0 =
     sql"""
          DELETE FROM standalones WHERE id = $movieId AND owner_id = $userId
        """.update
 
-def updateStandaloneQry(updatedMovie: Standalone, userId: UserId): Update0 =
-  sql"""
-       UPDATE standalones
-          SET title = ${updatedMovie.title}
-            , year = ${updatedMovie.year}
-        WHERE id = ${updatedMovie.id} AND owner_id = $userId
-     """.update
+  def updateStandaloneQry(updatedMovie: Standalone, userId: UserId): Update0 =
+    sql"""
+         UPDATE standalones
+            SET title = ${updatedMovie.title}
+              , year = ${updatedMovie.year}
+          WHERE id = ${updatedMovie.id} AND owner_id = $userId
+       """.update

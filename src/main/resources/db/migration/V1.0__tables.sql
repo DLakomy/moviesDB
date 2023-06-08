@@ -8,16 +8,16 @@ CREATE TABLE standalones (
 
 CREATE TABLE series (
   id TEXT PRIMARY KEY,
-  title TEXT,
-  owner_id TEXT,
+  title TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
   FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
 CREATE TABLE episodes (
-  series_id TEXT,
-  number INTEGER,
-  title TEXT,
-  year INTEGER,
+  series_id TEXT NOT NULL,
+  number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  year INTEGER NOT NULL,
   PRIMARY KEY (series_id, number),
   FOREIGN KEY (series_id) REFERENCES series(id)
 );
