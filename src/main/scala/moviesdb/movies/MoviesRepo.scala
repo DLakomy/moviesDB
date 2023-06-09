@@ -61,7 +61,13 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
       yield Right(newSeries)
 
   def deleteMovie(movieId: MovieId, userId: UserId): F[Option[Unit]] =
-    deleteStandaloneQry(movieId, userId).run.transact(xa).map(n => Option.when(n>0)(()))
+    deleteStandaloneQry(movieId, userId).run.transact(xa).flatMap { n =>
+      if (n == 0 )
+        (deleteEpisodesQry(movieId, userId).run >> deleteSeriesQry(movieId, userId).run)
+          .transact(xa).map(n => Option.when(n>0)(()))
+      else
+        Some(()).pure
+    }
 
   def updateMovie(updatedMovie: Movie, userId: UserId): F[DbErrorOr[Unit]] = updatedMovie match
     case updatedStandalone: Standalone =>
@@ -122,4 +128,22 @@ private[this] object MoviesQueries:
             SET title = ${updatedMovie.title}
               , year = ${updatedMovie.year}
           WHERE id = ${updatedMovie.id} AND owner_id = $userId
+       """.update
+
+  def deleteEpisodesQry(movieId: MovieId, userId: UserId): Update0 =
+    sql"""
+         DELETE FROM episodes
+          WHERE series_id = (
+                  SELECT id
+                    FROM series
+                   WHERE id = $movieId
+                     AND owner_id = $userId
+                )
+       """.update
+
+  def deleteSeriesQry(movieId: MovieId, userId: UserId): Update0 =
+    sql"""
+         DELETE FROM series
+          WHERE id = $movieId
+            AND owner_id = $userId
        """.update

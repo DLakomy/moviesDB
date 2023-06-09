@@ -47,6 +47,8 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
     check(insertSeriesQry(series, uid))
     check(getEpisodesForSeriesQry(mid1))
+    check(deleteEpisodesQry(mid1, uid))
+    check(deleteSeriesQry(mid1, uid))
   }
 
   test("Some failing DMLs should typecheck after Doobie issue #1782 is fixed".ignore) {
@@ -149,4 +151,43 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(movieFromCreate, newSeries1.withId(id), "The movie is not identical to what was provided")
     assertEquals(Some(movieFromCreate), movieFromGet, "Movie from create doesn't match the one fetched")
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
+  }
+
+  test("Should delete a series") {
+    val newMovie = standaloneTemplate
+
+    val program = for
+      movieFromCreate <- addTestMovie(newSeries1, uid)
+      id = movieFromCreate.id
+      deleteOtherUserResult <- moviesRepo.deleteMovie(id, otherUid)
+      // to be surce that the episodes remain untouched
+      movieFromRepoUntouched <- moviesRepo.getMovie(id, uid)
+      deleteCorrectResult <- moviesRepo.deleteMovie(id, uid)
+      deleteAgainResult <- moviesRepo.deleteMovie(id, uid)
+      movieFromRepo <- moviesRepo.getMovie(id, uid)
+    yield (
+      movieFromCreate,
+      movieFromRepoUntouched,
+      deleteOtherUserResult,
+      deleteCorrectResult,
+      deleteAgainResult,
+      movieFromRepo
+    )
+
+    val (
+      movieFromCreate,
+      movieFromRepoUntouched,
+      deleteOtherUserResult,
+      deleteCorrectResult,
+      deleteAgainResult,
+      movieFromRepo
+    ) = program.unsafeRunSync()
+
+    assertEquals(deleteOtherUserResult, None, "Shouldn't delete other user's movie")
+    // Why this test? It's quite easy to remove a detail and forget to rollback if the master can't be found
+    // fot this user
+    assertEquals(movieFromRepoUntouched, Some(movieFromCreate), "Shouldn't touch a series if it's not being deleted")
+    assertEquals(deleteCorrectResult, Some(()))
+    assertEquals(deleteAgainResult, None, "The movie shouldn't exist at this point")
+    assertEquals(movieFromRepo, None, "Movie shouldn't be found after deletion")
   }
