@@ -14,6 +14,8 @@ import moviesdb.testUtils.*
 
 import java.util.UUID
 
+// TODO comparing episodes lists can be flaky, the order from db is not guaranteed to be the same
+
 class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
   // to be used in the tests acting on a single movie
