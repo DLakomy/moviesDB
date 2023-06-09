@@ -137,6 +137,8 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
     val program = for
       movieFromCreate <- addTestMovie(newSeries1, uid)
+      // a second one to be sure, that the join between series and episodes is correct
+      _ <- addTestMovie(newSeries2, uid)
       id = movieFromCreate.id
       movieFromGet <- moviesRepo.getMovie(id, uid)
       otherUserMovie <- moviesRepo.getMovie(id, otherUid)
