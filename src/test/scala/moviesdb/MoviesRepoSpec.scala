@@ -7,7 +7,7 @@ import doobie.implicits.*
 import doobie.{munit as _, *}
 import moviesdb.core.syntax.MoviesSyntax.*
 import moviesdb.domain.*
-import moviesdb.domain.Movies.{Movie, MovieId, NewMovie, NewStandalone, ProductionYear}
+import moviesdb.domain.Movies.{Episode, Movie, MovieId, NewMovie, NewStandalone, ProductionYear}
 import moviesdb.movies.sqlite.MoviesRepo
 import moviesdb.sqliteSupport.Utils.*
 import moviesdb.testUtils.*
@@ -62,6 +62,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     check(insertStandaloneQry(standaloneTemplate.withId(mid1), uid1))
     check(updateStandaloneQry(standalone, uid))
     check(insertEpisodeQry(mid1, newSeries1.episodes.head))
+    check(updateSeriesHeadQry(series, uid))
   }
 
   // fails in case of creation error
@@ -190,4 +191,30 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(deleteCorrectResult, Some(()))
     assertEquals(deleteAgainResult, None, "The movie shouldn't exist at this point")
     assertEquals(movieFromRepo, None, "Movie shouldn't be found after deletion")
+  }
+
+  test("Should update a series") {
+
+    val newMovie = newSeries1
+    val updatedMovie = // we'll add id later
+      newMovie.copy(
+        title = newMovie.title + "a",
+        episodes = newMovie.episodes.map {
+          // this year thing is unwieldy; I won't refactor it tho, no time :( next time
+          case Episode(title, year, number) => Episode(title+'b', year.copy(year.year+1), number+1)
+        }
+      )
+
+    val program = for
+      movieFromCreate <- addTestMovie(newMovie, uid)
+      id = movieFromCreate.id
+      correctUpdateResult <- moviesRepo.updateMovie(updatedMovie.withId(id), uid)
+      failedUpdateResult <- moviesRepo.updateMovie(newMovie.withId(id), otherUid)
+      movieFromRepo <- moviesRepo.getMovie(id, uid)
+    yield (id, correctUpdateResult, failedUpdateResult, movieFromRepo)
+
+    val (id, correctUpdateResult, failedUpdateResult, movieFromRepo) = program.unsafeRunSync()
+
+    assertEquals(movieFromRepo, Some(updatedMovie.withId(id)), "Not updated correctly")
+    assertEquals(failedUpdateResult, Left(DbError.MovieNotFound), "Movie shouldn't be found with a wrong userId")
   }

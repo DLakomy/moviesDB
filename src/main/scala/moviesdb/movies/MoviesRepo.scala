@@ -73,8 +73,22 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
     case updatedStandalone: Standalone =>
       updateStandaloneQry(updatedStandalone, userId).run.transact(xa)
         .map(n => Either.cond(n>0, (), DbError.MovieNotFound))
-    case _ => ???
+    case updatedSeries: Series =>
+      val qry = for
+        headCnt <- updateSeriesHeadQry(updatedSeries, userId).run
+        // delete+insert is not optimal, but difficult if episodes are modeled this way
+        // as said in ReadMe (unless I've forgotten) my point was to write
+        // a project with a useful structure, not to model the domain 100% suitably
+        id = updatedSeries.id
+        _ <-
+          if (headCnt > 0)
+            deleteEpisodesQry(id, userId).run >>
+            updatedSeries.episodes.traverse(ep => insertEpisodeQry(id, ep).run)
+          else
+            List.empty[Int].pure[ConnectionIO]
+      yield headCnt
 
+      qry.transact(xa).map(n => Either.cond(n > 0, (), DbError.MovieNotFound))
 
 private[this] object MoviesQueries:
   def getStandalonesForUserQry(userId: UserId): Query0[Standalone] =
@@ -146,4 +160,11 @@ private[this] object MoviesQueries:
          DELETE FROM series
           WHERE id = $movieId
             AND owner_id = $userId
+       """.update
+
+  def updateSeriesHeadQry(updatedMovie: Series, userId: UserId): Update0 =
+    sql"""
+         UPDATE series
+            SET title = ${updatedMovie.title}
+          WHERE id = ${updatedMovie.id} AND owner_id = $userId
        """.update
