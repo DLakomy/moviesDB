@@ -7,6 +7,7 @@ import cats.effect.kernel.MonadCancelThrow
 import cats.effect.std.UUIDGen
 import cats.syntax.all.*
 import doobie.implicits.*
+import doobie.util.fragment.Fragment
 import doobie.util.query.Query0
 import doobie.util.update.Update0
 import doobie.{ConnectionIO, Read, Transactor, Update}
@@ -20,10 +21,13 @@ import java.util.UUID
 class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends MoviesRepoAlgebra[F]:
   import MoviesQueries.*
 
+  private def getAllSeriesForUser(id: UserId): ConnectionIO[List[Series]] =
+    getAllSeriesForUserQry(id).to[List]
+
   def getMoviesForUser(id: UserId): F[List[Movie]] =
     val transaction = for
       standalones <- getStandalonesForUserQry(id).to[List]
-      series <- getAllSeriesForUserQry(id).to[List]
+      series <- getAllSeriesForUser(id)
     yield standalones ++ series
 
     transaction.transact(xa)
@@ -99,12 +103,18 @@ private[this] object MoviesQueries:
     sql"SELECT id, title, year FROM standalones WHERE owner_id = $userId AND id = $movieId"
       .query[Standalone]
 
-  def getAllSeriesForUserQry(userId: UserId): Query0[Series] = ???
+  private def getAllSeriesForUserFr(userId: UserId) =
+    fr"SELECT id, title FROM series WHERE owner_id = $userId"
+
+  private def seriesHeadListFromQry(fr: Fragment) =
+    fr.query[(MovieId, String)].map((id, title) => Series(id, title, List.empty))
+
+  def getAllSeriesForUserQry(userId: UserId): Query0[Series] =
+    seriesHeadListFromQry(getAllSeriesForUserFr(userId))
 
   // the episodes should be fetched separately (it is a separate query, so I can check it in UT)
   def getSeriesHeaderForUserQry(movieId: MovieId, userId: UserId): Query0[Series] =
-    sql"SELECT id, title FROM series WHERE owner_id = $userId AND id = $movieId"
-      .query[(MovieId, String)].map((id, title) => Series(id, title, List.empty))
+    seriesHeadListFromQry((getAllSeriesForUserFr(userId) ++ fr"AND id = $movieId"))
 
   def insertStandaloneQry(movie: Standalone, userId: UserId): Update0 =
     sql"""
