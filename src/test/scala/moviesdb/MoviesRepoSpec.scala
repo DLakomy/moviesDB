@@ -6,7 +6,7 @@ import cats.syntax.all.*
 import doobie.implicits.*
 import doobie.{munit as _, *}
 import moviesdb.core.syntax.MoviesSyntax.*
-import moviesdb.domain.*
+import moviesdb.domain.{UserId, *}
 import moviesdb.domain.Movies.{Episode, Movie, MovieId, NewMovie, NewStandalone, ProductionYear}
 import moviesdb.movies.sqlite.MoviesRepo
 import moviesdb.sqliteSupport.Utils.*
@@ -15,27 +15,26 @@ import moviesdb.testUtils.syntax.MoviesSyntax.*
 
 import java.util.UUID
 
-// TODO and better use random user ids... https://scalameta.org/munit/docs/fixtures.html
-
 class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
-  // to be used in the tests acting on a single movie
-  // (not when getting all movies for the user)
-  // (maybe shoulda generate another one for every test ¯\_(ツ)_/¯ )
-  private val uid1 = UserId(UUID.randomUUID())
-  private val uid2 = UserId(UUID.randomUUID())
-  // to be used when checking the behaviour with a wrong user id
-  // (better don't add any movie to this user)
-  private val otherUid = UserId(UUID.randomUUID())
+  // Always two, there are. No more. No less.
+  private val withUsers = FunFixture[(UserId, UserId)] (
+    setup = { _ =>
+      val usr1 = UserId(UUID.randomUUID())
+      val usr2 = UserId(UUID.randomUUID())
+      (sql"insert into users(id, name, password_hash) values ($usr1, 'testuser', 'whatever')".update.run >>
+        sql"insert into users(id, name, password_hash) values ($usr2, 'testuser2', 'whatever')".update.run)
+        .transact(transactor).unsafeRunSync()
+      (usr1, usr2)
+    },
+    teardown = _ => () // theoretically it shouldn't collide...
+  )
 
   val ds = dataSourceFromConnString(inMemoryConnString("moviesRepo"))
   val transactor: Transactor[IO] = Transactor.fromConnection(ds.getConnection)
 
   override def beforeAll(): Unit =
     initDb[IO](ds).unsafeRunSync()
-    ( sql"insert into users(id, name, password_hash) values ($uid1, 'testuser', 'whatever')".update.run >>
-      sql"insert into users(id, name, password_hash) values ($uid2, 'testuser2', 'whatever')".update.run )
-      .transact(transactor).unsafeRunSync()
 
   private val moviesRepo = MoviesRepo(transactor)
 
@@ -45,18 +44,19 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     val randomId = MovieId(UUID.randomUUID())
     val standalone = standaloneTemplate.withId(randomId)
     val series = newSeries1.withId(randomId)
+    val usr1 = UserId(UUID.randomUUID())
 
-    check(getStandalonesForUserQry(uid1))
-    check(getStandaloneForUserQry(mid1, uid1))
-    check(deleteStandaloneQry(mid1, uid1))
+    check(getStandalonesForUserQry(usr1))
+    check(getStandaloneForUserQry(mid1, usr1))
+    check(deleteStandaloneQry(mid1, usr1))
 
-    check(insertSeriesQry(series, uid1))
+    check(insertSeriesQry(series, usr1))
     check(getEpisodesForSeriesQry(mid1))
-    check(deleteEpisodesQry(mid1, uid1))
-    check(deleteSeriesQry(mid1, uid1))
+    check(deleteEpisodesQry(mid1, usr1))
+    check(deleteSeriesQry(mid1, usr1))
   }
 
-  test("Some failing DMLs should typecheck after Doobie issue #1782 is fixed".ignore) {
+  withUsers.test("Some failing DMLs should typecheck after Doobie issue #1782 is fixed".ignore) { (usr1, usr2) =>
     import MoviesQueries.*
 
     val randomId = MovieId(UUID.randomUUID())
@@ -64,10 +64,10 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     val series = newSeries1.withId(randomId)
 
     // fails, I suspect https://github.com/tpolecat/doobie/issues/1782
-    check(insertStandaloneQry(standaloneTemplate.withId(mid1), uid1))
-    check(updateStandaloneQry(standalone, uid1))
+    check(insertStandaloneQry(standaloneTemplate.withId(mid1), usr1))
+    check(updateStandaloneQry(standalone, usr1))
     check(insertEpisodeQry(mid1, newSeries1.episodes.head))
-    check(updateSeriesHeadQry(series, uid1))
+    check(updateSeriesHeadQry(series, usr1))
   }
 
   // fails in case of creation error
@@ -80,13 +80,13 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
 
   // I test create a bit more extensively here
   // (no separate test, its hard to test it without getMovie; I don't want to duplicate getMovie logic)
-  test("Should create and retrieve a standalone movie") {
+  withUsers.test("Should create and retrieve a standalone movie") { (usr1, usr2) =>
 
     val program = for
-      movieFromCreate <- addTestMovie(standaloneTemplate, uid1)
+      movieFromCreate <- addTestMovie(standaloneTemplate, usr1)
       id = movieFromCreate.id
-      movieFromGet <- moviesRepo.getMovie(id, uid1)
-      otherUserMovie <- moviesRepo.getMovie(id, otherUid)
+      movieFromGet <- moviesRepo.getMovie(id, usr1)
+      otherUserMovie <- moviesRepo.getMovie(id, usr2)
     yield (id, movieFromGet, otherUserMovie, movieFromCreate)
 
     val (id, movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
@@ -96,7 +96,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }
 
-  test("Should update a standalone movie") {
+  withUsers.test("Should update a standalone movie") { (usr1, usr2) =>
 
     val newMovie = standaloneTemplate
     val updatedMovie = // we'll add id later
@@ -104,11 +104,11 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
       standaloneTemplate.copy(title = newMovie.title + "a", year = ProductionYear(newMovieYear + 1))
 
     val program = for
-      movieFromCreate <- addTestMovie(newMovie, uid1)
+      movieFromCreate <- addTestMovie(newMovie, usr1)
       id = movieFromCreate.id
-      correctUpdateResult <- moviesRepo.updateMovie(updatedMovie.withId(id), uid1)
-      failedUpdateResult <- moviesRepo.updateMovie(newMovie.withId(id), otherUid)
-      movieFromRepo <- moviesRepo.getMovie(id, uid1)
+      correctUpdateResult <- moviesRepo.updateMovie(updatedMovie.withId(id), usr1)
+      failedUpdateResult <- moviesRepo.updateMovie(newMovie.withId(id), usr2)
+      movieFromRepo <- moviesRepo.getMovie(id, usr1)
     yield (id, correctUpdateResult, failedUpdateResult, movieFromRepo)
 
     val (id, correctUpdateResult, failedUpdateResult, movieFromRepo) = program.unsafeRunSync()
@@ -117,16 +117,16 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(failedUpdateResult, Left(DbError.MovieNotFound), "Movie shouldn't be found with a wrong userId")
   }
 
-  test("Should delete a standalone movie") {
+  withUsers.test("Should delete a standalone movie") { (usr1, usr2) =>
     val newMovie = standaloneTemplate
 
     val program = for
-      movieFromCreate <- addTestMovie(newMovie, uid1)
+      movieFromCreate <- addTestMovie(newMovie, usr1)
       id = movieFromCreate.id
-      deleteOtherUserResult <- moviesRepo.deleteMovie(id, otherUid)
-      deleteCorrectResult <- moviesRepo.deleteMovie(id, uid1)
-      deleteAgainResult <- moviesRepo.deleteMovie(id, uid1)
-      movieFromRepo <- moviesRepo.getMovie(id, uid1)
+      deleteOtherUserResult <- moviesRepo.deleteMovie(id, usr2)
+      deleteCorrectResult <- moviesRepo.deleteMovie(id, usr1)
+      deleteAgainResult <- moviesRepo.deleteMovie(id, usr1)
+      movieFromRepo <- moviesRepo.getMovie(id, usr1)
     yield (deleteOtherUserResult, deleteCorrectResult, deleteAgainResult, movieFromRepo)
 
     val (deleteOtherUserResult, deleteCorrectResult, deleteAgainResult, movieFromRepo) = program.unsafeRunSync()
@@ -141,15 +141,15 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
   // (no separate test, its hard to test it without getMovie; I don't want to duplicate getMovie logic)
   // quite similar to testing a standalone, but I don't want to be hasty with refactoring it to one function
   // it can possibly diverge in the hypothetical future
-  test("Should create and retrieve a series") {
+  withUsers.test("Should create and retrieve a series") { (usr1, usr2) =>
 
     val program = for
-      movieFromCreate <- addTestMovie(newSeries1, uid1)
+      movieFromCreate <- addTestMovie(newSeries1, usr1)
       // a second one to be sure, that the join between series and episodes is correct
-      _ <- addTestMovie(newSeries2, uid1)
+      _ <- addTestMovie(newSeries2, usr1)
       id = movieFromCreate.id
-      movieFromGet <- moviesRepo.getMovie(id, uid1)
-      otherUserMovie <- moviesRepo.getMovie(id, otherUid)
+      movieFromGet <- moviesRepo.getMovie(id, usr1)
+      otherUserMovie <- moviesRepo.getMovie(id, usr2)
     yield (id, movieFromGet, otherUserMovie, movieFromCreate)
 
     val (id, movieFromGet, otherUserMovie, movieFromCreate) = program.unsafeRunSync()
@@ -159,16 +159,16 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(otherUserMovie, None, "Movie shouldn't be found with a wrong userId")
   }
 
-  test("Should delete a series") {
+  withUsers.test("Should delete a series") { (usr1, usr2) =>
     val program = for
-      movieFromCreate <- addTestMovie(newSeries1, uid1)
+      movieFromCreate <- addTestMovie(newSeries1, usr1)
       id = movieFromCreate.id
-      deleteOtherUserResult <- moviesRepo.deleteMovie(id, otherUid)
+      deleteOtherUserResult <- moviesRepo.deleteMovie(id, usr2)
       // to be surce that the episodes remain untouched
-      movieFromRepoUntouched <- moviesRepo.getMovie(id, uid1)
-      deleteCorrectResult <- moviesRepo.deleteMovie(id, uid1)
-      deleteAgainResult <- moviesRepo.deleteMovie(id, uid1)
-      movieFromRepo <- moviesRepo.getMovie(id, uid1)
+      movieFromRepoUntouched <- moviesRepo.getMovie(id, usr1)
+      deleteCorrectResult <- moviesRepo.deleteMovie(id, usr1)
+      deleteAgainResult <- moviesRepo.deleteMovie(id, usr1)
+      movieFromRepo <- moviesRepo.getMovie(id, usr1)
     yield (
       movieFromCreate,
       movieFromRepoUntouched,
@@ -196,7 +196,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(movieFromRepo, None, "Movie shouldn't be found after deletion")
   }
 
-  test("Should update a series") {
+  withUsers.test("Should update a series") { (usr1, usr2) =>
 
     val newMovie = newSeries1
     val updatedMovie = // we'll add id later
@@ -209,11 +209,11 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
       )
 
     val program = for
-      movieFromCreate <- addTestMovie(newMovie, uid1)
+      movieFromCreate <- addTestMovie(newMovie, usr1)
       id = movieFromCreate.id
-      correctUpdateResult <- moviesRepo.updateMovie(updatedMovie.withId(id), uid1)
-      failedUpdateResult <- moviesRepo.updateMovie(newMovie.withId(id), otherUid)
-      movieFromRepo <- moviesRepo.getMovie(id, uid1)
+      correctUpdateResult <- moviesRepo.updateMovie(updatedMovie.withId(id), usr1)
+      failedUpdateResult <- moviesRepo.updateMovie(newMovie.withId(id), usr2)
+      movieFromRepo <- moviesRepo.getMovie(id, usr1)
     yield (id, correctUpdateResult, failedUpdateResult, movieFromRepo)
 
     val (id, correctUpdateResult, failedUpdateResult, movieFromRepo) = program.unsafeRunSync()
@@ -222,7 +222,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(failedUpdateResult, Left(DbError.MovieNotFound), "Movie shouldn't be found with a wrong userId")
   }
 
-  test("Should retrieve all movies for a given user".ignore) {
+  withUsers.test("Should retrieve all movies for a given user") { (usr1, usr2) =>
 
     val user1Movies: List[NewMovie] = List(standaloneTemplate, newSeries1, newSeries2)
 
@@ -233,10 +233,10 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     )
 
     val program = for
-      u1MoviesCreated <- user1Movies.traverse(mv => addTestMovie(mv, uid1)).map(_.map(_.normalised))
-      u2MoviesCreated <- user2Movies.traverse(mv => addTestMovie(mv, uid2)).map(_.map(_.normalised))
-      u1MoviesGot <- moviesRepo.getMoviesForUser(uid1)
-      u2MoviesGot <- moviesRepo.getMoviesForUser(uid2)
+      u1MoviesCreated <- user1Movies.traverse(mv => addTestMovie(mv, usr1)).map(_.map(_.normalised))
+      u2MoviesCreated <- user2Movies.traverse(mv => addTestMovie(mv, usr2)).map(_.map(_.normalised))
+      u1MoviesGot <- moviesRepo.getMoviesForUser(usr1)
+      u2MoviesGot <- moviesRepo.getMoviesForUser(usr2)
     yield (u1MoviesCreated, u1MoviesGot, u2MoviesCreated, u2MoviesGot)
 
     val (u1MoviesCreated, u1MoviesGot, u2MoviesCreated, u2MoviesGot) = program.unsafeRunSync()
