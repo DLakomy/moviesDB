@@ -46,22 +46,25 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     val series = newSeries1.withId(randomId)
     val usr1 = UserId(UUID.randomUUID())
 
-    check(getStandalonesForUserQry(usr1))
-    check(getStandaloneForUserQry(mid1, usr1))
+    check(getStandaloneForUserQry(None, usr1))
+    check(getStandaloneForUserQry(Some(mid1), usr1))
     check(deleteStandaloneQry(mid1, usr1))
 
     check(insertSeriesQry(series, usr1))
+    check(getSeriesHeaderQry(None, usr1))
+    check(getSeriesHeaderQry(Some(mid1), usr1))
     check(getEpisodesForSeriesQry(mid1))
     check(deleteEpisodesQry(mid1, usr1))
     check(deleteSeriesQry(mid1, usr1))
   }
 
-  withUsers.test("Some failing DMLs should typecheck after Doobie issue #1782 is fixed".ignore) { (usr1, usr2) =>
+  test("Some failing DMLs should typecheck after Doobie issue #1782 is fixed".ignore) {
     import MoviesQueries.*
 
     val randomId = MovieId(UUID.randomUUID())
     val standalone = standaloneTemplate.withId(randomId)
     val series = newSeries1.withId(randomId)
+    val usr1 = UserId(UUID.randomUUID())
 
     // fails, I suspect https://github.com/tpolecat/doobie/issues/1782
     check(insertStandaloneQry(standaloneTemplate.withId(mid1), usr1))

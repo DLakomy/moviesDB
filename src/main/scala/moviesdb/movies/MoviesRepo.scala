@@ -8,9 +8,10 @@ import cats.effect.std.UUIDGen
 import cats.syntax.all.*
 import doobie.implicits.*
 import doobie.util.fragment.Fragment
+import doobie.util.fragments.andOpt
 import doobie.util.query.Query0
 import doobie.util.update.Update0
-import doobie.{ConnectionIO, Read, Transactor, Update}
+import doobie.{ConnectionIO, LogHandler, Read, Transactor, Update}
 import moviesdb.core.syntax.MoviesSyntax.*
 import moviesdb.domain.DbError.InvalidData
 import moviesdb.domain.{PasswordHash, User, UserName}
@@ -22,21 +23,21 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
   import MoviesQueries.*
 
   private def getAllSeriesForUser(id: UserId): ConnectionIO[List[Series]] =
-    getAllSeriesForUserQry(id).to[List]
+    getSeriesHeaderQry(None, id).to[List]
 
   def getMoviesForUser(id: UserId): F[List[Movie]] =
     val transaction = for
-      standalones <- getStandalonesForUserQry(id).to[List]
+      standalones <- getStandaloneForUserQry(None, id).to[List]
       series <- getAllSeriesForUser(id)
     yield standalones ++ series
 
     transaction.transact(xa)
 
   def getMovie(movieId: MovieId, userId: UserId): F[Option[Movie]] =
-    getStandaloneForUserQry(movieId, userId).option.transact(xa).flatMap {
+    getStandaloneForUserQry(Some(movieId), userId).option.transact(xa).flatMap {
       case None =>
         val query = for
-          maybeHeader <- getSeriesHeaderForUserQry(movieId, userId).option
+          maybeHeader <- getSeriesHeaderQry(Some(movieId), userId).option
           fetchedEps <-
             if (maybeHeader.isEmpty) List.empty[Episode].pure[ConnectionIO]
             else getEpisodesForSeriesQry(movieId).to[List]
@@ -95,32 +96,22 @@ class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends Mov
       qry.transact(xa).map(n => Either.cond(n > 0, (), DbError.MovieNotFound))
 
 private[this] object MoviesQueries:
-  def getStandalonesForUserQry(userId: UserId): Query0[Standalone] =
-    sql"SELECT id, title, year FROM standalones WHERE owner_id = $userId"
+  // all or one by id
+  def getStandaloneForUserQry(movieId: Option[MovieId], userId: UserId): Query0[Standalone] =
+    (sql"SELECT id, title, year FROM standalones WHERE owner_id = $userId" ++ movieId.fold(Fragment.empty)(id => fr"and id = $id"))
       .query[Standalone]
-
-  def getStandaloneForUserQry(movieId: MovieId, userId: UserId): Query0[Standalone] =
-    sql"SELECT id, title, year FROM standalones WHERE owner_id = $userId AND id = $movieId"
-      .query[Standalone]
-
-  private def getAllSeriesForUserFr(userId: UserId) =
-    fr"SELECT id, title FROM series WHERE owner_id = $userId"
-
-  private def seriesHeadListFromQry(fr: Fragment) =
-    fr.query[(MovieId, String)].map((id, title) => Series(id, title, List.empty))
-
-  def getAllSeriesForUserQry(userId: UserId): Query0[Series] =
-    seriesHeadListFromQry(getAllSeriesForUserFr(userId))
 
   // the episodes should be fetched separately (it is a separate query, so I can check it in UT)
-  def getSeriesHeaderForUserQry(movieId: MovieId, userId: UserId): Query0[Series] =
-    seriesHeadListFromQry((getAllSeriesForUserFr(userId) ++ fr"AND id = $movieId"))
+  // all or one by id
+  def getSeriesHeaderQry(movieId: Option[MovieId], userId: UserId): Query0[Series] =
+    (fr"SELECT id, title FROM series WHERE owner_id = $userId" ++ movieId.fold(Fragment.empty)(id => fr"and id = $id"))
+      .query[(MovieId, String)].map((id, title) => Series(id, title, List.empty))
 
   def insertStandaloneQry(movie: Standalone, userId: UserId): Update0 =
-    sql"""
-      INSERT INTO standalones (id, title, year, owner_id)
-      VALUES (${movie.id}, ${movie.title}, ${movie.year}, $userId)
-    """.update
+      sql"""
+        INSERT INTO standalones (id, title, year, owner_id)
+        VALUES (${movie.id}, ${movie.title}, ${movie.year}, $userId)
+      """.update
 
   def insertSeriesQry(movie: Series, userId: UserId): Update0 =
     sql"""

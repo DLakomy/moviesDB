@@ -7,7 +7,7 @@ CREATE TABLE standalones (
 );
 
 CREATE TABLE series (
-  id TEXT PRIMARY KEY,
+  id TEXT PRIMARY KEY NOT NULL,
   title TEXT NOT NULL,
   owner_id TEXT NOT NULL,
   FOREIGN KEY (owner_id) REFERENCES users(id)

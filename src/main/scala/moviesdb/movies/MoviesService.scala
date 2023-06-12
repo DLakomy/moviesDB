@@ -22,7 +22,7 @@ class MoviesService[F[_]: Applicative](repo: MoviesRepoAlgebra[F]) extends Movie
   def updateMovie(movieId: MovieId, updatedMovie: Movie, userId: UserId): F[ApiErrorOr[Unit]] =
     if (movieId != updatedMovie.id) Left(ApiError.IdMismatch).pure[F]
     else {
-      // TODO it's worth to consider using EitherT, btw validations are missing
+      // it's worth to consider using EitherT, btw validations are missing
       repo.updateMovie(updatedMovie, userId).map {
         _.left.map {
           case DbError.MovieNotFound     => ApiError.MovieNotFound
