@@ -54,6 +54,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     check(getSeriesHeaderQry(None, usr1))
     check(getSeriesHeaderQry(Some(mid1), usr1))
     check(getEpisodesForSeriesQry(mid1))
+    check(getEpisodesForSeriesQry(List(mid1, mid1)))
     check(deleteEpisodesQry(mid1, usr1))
     check(deleteSeriesQry(mid1, usr1))
   }
@@ -225,7 +226,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
     assertEquals(failedUpdateResult, Left(DbError.MovieNotFound), "Movie shouldn't be found with a wrong userId")
   }
 
-  withUsers.test("Should retrieve all movies for a given user") { (usr1, usr2) =>
+  withUsers.test("Should retrieve all movies for the given user") { (usr1, usr2) =>
 
     val user1Movies: List[NewMovie] = List(standaloneTemplate, newSeries1, newSeries2)
 
@@ -240,7 +241,7 @@ class MoviesRepoSpec extends munit.FunSuite with doobie.munit.IOChecker:
       u2MoviesCreated <- user2Movies.traverse(mv => addTestMovie(mv, usr2)).map(_.map(_.normalised))
       u1MoviesGot <- moviesRepo.getMoviesForUser(usr1)
       u2MoviesGot <- moviesRepo.getMoviesForUser(usr2)
-    yield (u1MoviesCreated, u1MoviesGot, u2MoviesCreated, u2MoviesGot)
+    yield (u1MoviesCreated.normalised, u1MoviesGot.normalised, u2MoviesCreated.normalised, u2MoviesGot.normalised)
 
     val (u1MoviesCreated, u1MoviesGot, u2MoviesCreated, u2MoviesGot) = program.unsafeRunSync()
 

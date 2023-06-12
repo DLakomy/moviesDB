@@ -17,3 +17,8 @@ object MoviesSyntax:
       movie match
         case s: Standalone => s.normalised
         case s: Series => s.normalised
+
+  // sorts by id and normalises every element
+  extension (movieList: List[Movie])
+    def normalised: List[Movie] =
+      movieList.map(_.normalised).sortBy(_.id.value)

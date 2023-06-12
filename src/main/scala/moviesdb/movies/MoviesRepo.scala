@@ -22,8 +22,12 @@ import java.util.UUID
 class MoviesRepo[F[_]: MonadCancelThrow: UUIDGen](xa: Transactor[F]) extends MoviesRepoAlgebra[F]:
   import MoviesQueries.*
 
-  private def getAllSeriesForUser(id: UserId): ConnectionIO[List[Series]] =
-    getSeriesHeaderQry(None, id).to[List]
+  private def getAllSeriesForUser(id: UserId): ConnectionIO[List[Series]] = for
+    series <- getSeriesHeaderQry(None, id).to[List]
+    episodes <- getEpisodesForSeriesQry(series.map(_.id)).to[List]
+  yield
+    val epsBySeries = episodes.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
+    series.map(s => s.copy(episodes = epsBySeries.getOrElse(s.id, List.empty)))
 
   def getMoviesForUser(id: UserId): F[List[Movie]] =
     val transaction = for
@@ -127,10 +131,16 @@ private[this] object MoviesQueries:
       VALUES ($seriesId, ${episode.title}, ${episode.year}, ${episode.number})
     """.update
 
+  // returns a list of episodes for the series given
   def getEpisodesForSeriesQry(seriesId: MovieId): Query0[Episode] =
-    sql"""
-      SELECT title, year, number FROM episodes WHERE series_id = $seriesId
-       """.query
+    getEpisodesForSeriesQry(List(seriesId)).map(_._2)
+
+  // returns a list of episodes with the series ids
+  def getEpisodesForSeriesQry(seriesIds: List[MovieId]): Query0[(MovieId, Episode)] =
+    ( fr"SELECT series_id, title, year, number FROM episodes WHERE series_id IN (" ++
+      seriesIds.map(n => fr0"$n").intercalate(fr",") ++
+      fr")"
+    ).query
 
   def deleteStandaloneQry(movieId: MovieId, userId: UserId): Update0 =
     sql"""
