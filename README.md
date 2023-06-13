@@ -29,10 +29,10 @@ TBD
 
 ## How to run?
 Provide these env variables (haven't tested yet :D, I'm gonna when writing a Dockerfile):
-- MOVIESDB_HOST - by default `localhost`
-- MOVIESDB_PORT - by default `8080`
-- MOVIESDB_DBPATH - by default `movies.db` (pun intended, see the project name)
-- MOVIESDB_DBPOOLSIZE - by default `32` (I'm curious if SQLite can handle this gracefully...)
+- `MOVIESDB_HOST` - by default `localhost`
+- `MOVIESDB_PORT` - by default `8080`
+- `MOVIESDB_DBPATH` - by default `movies.db` (pun intended, see the project name)
+- `MOVIESDB_DBPOOLSIZE` - by default `32` (I'm curious if SQLite can handle this gracefully...)
 
 Till I do a fatjar/Docker (which I plan to do soon...ish) just use `sbt run` and go to http://localhost:8080/docs
 (or wherever it is in case you're using a nondefault configuration).
