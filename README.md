@@ -1,4 +1,5 @@
 # Movies DB
+[![Scala CI](https://github.com/DLakomy/moviesDB/actions/workflows/scala.yml/badge.svg)](https://github.com/DLakomy/moviesDB/actions/workflows/scala.yml)
 
 The point of the exercise was to write an application with a REST-like API,
 OpenAPI documentation, JSON encoding and a database. I've decided to use these libraries:
