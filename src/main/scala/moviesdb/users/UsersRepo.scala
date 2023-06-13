@@ -15,8 +15,9 @@ class UsersRepo[F[_]: MonadCancelThrow](xa: Transactor[F]) extends UsersRepoAlge
       .option
       .transact(xa)
 
-// private so the queries are not visible outside
-private[this] object UsersRepo:
-  def getUserQry(userName: UserName, passwordHash: PasswordHash): Query0[User] =
+object UsersRepo:
+  // private so the query are not visible outside
+  // the object remains public, so the apply method can be used
+  private[sqlite] def getUserQry(userName: UserName, passwordHash: PasswordHash): Query0[User] =
     sql"SELECT id, name FROM users WHERE name = $userName AND password_hash = $passwordHash"
       .query[User]
