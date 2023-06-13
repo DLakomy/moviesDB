@@ -60,3 +60,6 @@ they are mean't to be used together anyway; it would be less code to maintain),
 Why out of scope? Well, I need to take a break from coding, sometimes :D
 I would pursue these points if it were a proper app (not just an exercise)
 or something I have no idea how to implement.
+
+## PS How to add a user?
+Well... You can use the ones from `V1.1__example_users.sql` or insert another one somehow. That's it for now ¯\_(ツ)_/¯
