@@ -26,3 +26,12 @@ lazy val rootProject = (project in file(".")).settings(
     )
   )
 )
+
+assembly / assemblyMergeStrategy := {
+  case path if path.endsWith("module-info.class") => MergeStrategy.discard
+  case PathList("META-INF", "maven", "org.webjars", "swagger-ui", "pom.properties") =>
+    MergeStrategy.singleOrError
+  case x =>
+    val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
+    oldStrategy(x)
+}
