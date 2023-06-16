@@ -1,6 +1,6 @@
 package moviesdb
 
-import cats.Monad
+import cats.Functor
 import cats.syntax.functor.*
 import io.circe.derivation.Configuration as CirceConfiguration
 import io.circe.{Decoder as CDecoder, Encoder as CEncoder}
@@ -22,12 +22,8 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
 import java.util.UUID
 
-class MovieEndpoints[F[_]](
-  moviesService: MoviesServiceAlgebra[F],
-  usersService: UsersServiceAlgebra[F]
-)(using F: Monad[F]):
+class MovieEndpoints[F[_]: Functor](moviesService: MoviesServiceAlgebra[F], usersService: UsersServiceAlgebra[F]):
 
-  // example
   val exampleMovies: List[Movie] = List(
     Standalone(MovieId(UUID.fromString("7f1411e0-7d13-47e6-b7f8-4a661c56dd5b")), "Movie1", ProductionYear(2007)),
     Series(MovieId(UUID.fromString("6b907b32-2e08-4f28-b904-4a580da5b632")),
@@ -45,7 +41,6 @@ class MovieEndpoints[F[_]](
     .in("movies")
     .securityIn(auth.basic[UsernamePassword]())
     .errorOut(statusCode(StatusCode.Forbidden).description("Unauthorized").and(stringBody.map(_ => ApiError.Unauthorized)(_.info)))
-//    .serverSecurityLogic(credentials => F.pure(Either.cond(credentials.password.getOrElse("")=="AQQ", User(UserId(UUID.randomUUID()), UserName("testUser")), ApiError.Unauthorized)))
     .serverSecurityLogic { credentials =>
       for
         maybeUser <- usersService.getUser(UserName(credentials.username), credentials.password.getOrElse(""))
