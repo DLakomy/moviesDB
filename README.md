@@ -29,7 +29,7 @@ Read the output carefully, it will show you where is the Fatjar (ie. the jar arc
 TBD
 
 ## How to run?
-Provide these env variables (haven't tested yet :D, I'm gonna when writing a Dockerfile):
+Provide these env variables:
 - `MOVIESDB_HOST` - by default `localhost`
 - `MOVIESDB_PORT` - by default `8080`
 - `MOVIESDB_DBPATH` - by default `movies.db` (pun intended, see the project name)
