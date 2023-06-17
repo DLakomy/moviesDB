@@ -29,3 +29,5 @@ jobs:
         cache: 'sbt'
     - name: Run tests
       run: sbt test
+    - name: Build Docker image
+      run: docker build -t moviesdb .
