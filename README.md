@@ -53,7 +53,7 @@ Change these parameters if needed.
 
 ## Worth doing but it's out of scope
 
-- endpoints tests (Tapir provides some useful functionalities for these)
+- endpoints tests (at the moment there is just one to fix a bug I've found)
 - E2E tests (and maybe test service layer and repos together in UTs,
 they are mean't to be used together anyway; it would be less code to maintain),
 - load tests (to be sure that SQLite can handle that..., anyway it wouldn't by my choice for a proper app, ofc.)

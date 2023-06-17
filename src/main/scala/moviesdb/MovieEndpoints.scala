@@ -71,8 +71,8 @@ class MovieEndpoints[F[_]: Functor](moviesService: MoviesServiceAlgebra[F], user
     .delete
     .in(path[UUID].name("id"))
     .out(statusCode(StatusCode.NoContent).description("Successfully deleted"))
-    .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Not found")))
-    .serverLogic(user => id => moviesService.deleteMovie(MovieId(id), user.id).map(_.toRight("Not found")))
+    .errorOutVariant(oneOfVariant(statusCode(StatusCode.NotFound).description("Movie not found").and(stringBody.map(_ => ApiError.MovieNotFound)(_.info))))
+    .serverLogic(user => id => moviesService.deleteMovie(MovieId(id), user.id).map(_.toRight(ApiError.MovieNotFound)))
 
   private val updateMovieById = moviesEndpoint
     .put
