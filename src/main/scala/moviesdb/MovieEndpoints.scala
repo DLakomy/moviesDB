@@ -1,4 +1,4 @@
-package moviesdb
+package moviesdb.endpoints
 
 import cats.Functor
 import cats.syntax.functor.*

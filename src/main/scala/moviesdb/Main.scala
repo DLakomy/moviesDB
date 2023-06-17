@@ -6,6 +6,7 @@ import com.comcast.ip4s.{Host, Hostname, Port, port}
 import doobie.ExecutionContexts
 import doobie.util.transactor.Transactor
 import moviesdb.core.HashingAlgs
+import moviesdb.endpoints.MovieEndpoints
 import moviesdb.movies.sqlite.MoviesRepo
 import moviesdb.movies.{MoviesRepoAlgebra, MoviesService}
 import moviesdb.sqliteSupport.Utils.{dataSourceFromConnString, dataSourceFromPath, inMemoryConnString}
